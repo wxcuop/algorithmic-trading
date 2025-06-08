@@ -1,0 +1,1 @@
+{"user": "user", "long_threshold": "0.5", "short_threshold": "0.5", "profit_target_pct": "2.00", "stop_target_pct": "1.50", "size": "100", "algo_name": "algo_ml_long_short_predict", "account": "616431823260", "region": "us-east-1"}
