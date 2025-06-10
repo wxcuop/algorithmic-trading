@@ -24,10 +24,6 @@ At minimum, at the end of this workshop, you will have an understanding how to l
 
 ![chart](assets/arch.png)
 
-## License
-
-This library is licensed under the MIT-0 License. See the LICENSE file.
-
 <details>
 <summary>  
 <b>External Dependencies</b>
