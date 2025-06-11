@@ -1,120 +1,106 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
+import os
+import sys
+import traceback
+import math
 import numpy as np
 import pandas as pd
-import talib as ta
-from talib.abstract import *
-import math
+import tensorflow as tf
 
+from keras.layers import Dropout, Dense
+from keras.wrappers.scikit_learn import KerasClassifier
+from keras.models import Sequential
+from keras.wrappers.scikit_learn import KerasRegressor
+
+yLen=2
+b=0
+
+# Optional
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+# These are the paths to where SageMaker mounts interesting things in your
+# container.
 prefix = '/opt/ml/'
-input_path = prefix + 'input/data/training'
 
-data_orig_file = input_path+'/data_orig.csv'
-data_file = input_path+'/data.csv'
+input_path = prefix + 'input/data/training/data_train.csv'
+test_path = prefix + 'input/data/training/data_test.csv'
 
-d = pd.read_csv(data_orig_file,infer_datetime_format=True, parse_dates=['dt'], index_col=['dt'])
-print(d.head())
+output_path = os.path.join(prefix, 'output')
+model_path = os.path.join(prefix, 'model')
 
-repeatCount=15
-repeatStep=1
-lookBack=repeatCount*repeatStep
-forwardWindow=5
+# Process and prepare the data
+def data_process(df):
+    global yLen
+    global b
+    dataX=[]
+    dataY=[]
+    for idx,row in df.iterrows():
+        row1=[]
+        r=row[1:len(row)-yLen]
+        for a in r:
+            row1.append(a)
+        x=np.array(row1)
+        y=np.array(row[len(row)-yLen:])
+        b=len(x)
+        dataX.append(x)
+        dataY.append(y)
+    dataX=np.array(dataX).astype(np.float32)
+    dataY=np.array(dataY).astype(np.float32)
+    return dataX,dataY,b
 
-profitTarget=2.0/100.0
-stopTarget=1.5/100.0
+def build_classifier():
+    global b
+    global yLen
+    print("build_classifier:b=%s,yLen=%s" % (b,yLen))
+    model = Sequential()
+    model.add(Dense(b, input_dim=b, kernel_initializer='normal', activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(int(b/2), kernel_initializer='normal', activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(yLen,kernel_initializer='normal', activation='sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    return model
 
-iCount=lookBack
-
-# header
-hData=["dt"]
-hData.append("close")
-for a in range(0,repeatCount):
-    hData.append("sma"+str((a+2)*repeatStep))
-for a in range(0,repeatCount):
-    hData.append("roc"+str((a+2)*repeatStep))
-hData.append("long")
-hData.append("short")
-
-# data
-tData=[]
-
-inputs = {
-    'close': np.array(d["close"])
-}
-sma=[]
-for a in range(0,repeatCount):
-    sma.append(SMA(inputs,timeperiod=(a+1)*repeatStep+1))
-roc=[]
-for a in range(0,repeatCount):
-    roc.append(ROC(inputs,timeperiod=(a+1)*repeatStep+1))
-
-closeList=d["close"]
-dLen=len(d)
-n=0
-lCount=0
-sCount=0
-nCount=0
-n=0
-for idx,row in d.iterrows():
-    if n<dLen-forwardWindow-1:
-        dt1=idx
-        cl=row["close"]
-        inputRec=[]
-        inputRec.append(idx)
-
-        inputRec0=[]
-
-        #close
-        inputRec0.append(cl)
-
-        #sma
-        for a in range(0,repeatCount):
-            if math.isnan(sma[a][n]):
-                inputRec0.append(cl)
-            else:
-                inputRec0.append(sma[a][n])
-
-        m1=min(inputRec0)
-        m2=max(inputRec0)
-        for a in inputRec0:
-            if m2-m1==0:
-                inputRec.append(0)
-            else:
-                inputRec.append((a-m1)/(m2-m1))
-
-        #roc
-        for a in range(0,repeatCount):
-            if math.isnan(roc[a][n]):
-                inputRec.append(0)
-            else:
-                inputRec.append(roc[a][n])
-
-        rClose=closeList[n+1:min(dLen-1,n+1+forwardWindow)].values.tolist()
-        low=min(rClose)
-        high=max(rClose)
+def generate_model(dataX, dataY, b):
+    model=build_classifier()
+    model.fit(dataX, dataY, epochs=100, batch_size=1)
+    scores = model.evaluate(dataX, dataY, verbose=0)
+    print("Training Data %s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+    return model
         
-        #long
-        long=0
-        if high>=cl+cl*profitTarget and low>=cl-cl*stopTarget:
-            long=1
-            lCount=lCount+1
-        inputRec.append(long)
- 
-        #short
-        short=0
-        if low<=cl-cl*profitTarget and high<=cl+cl*stopTarget:
-            short=1
-            sCount=sCount+1
-        inputRec.append(short)
+def train():
+    print('Starting the training.')
+    try:
+        raw_data = pd.read_csv(input_path)
+        #print(raw_data)
+        X, y, b = data_process(raw_data)
+        model = generate_model(X, y, b)
+        model.save(os.path.join(model_path, 'model.h5'))
+        
+        print('Training is complete. Model saved.')
+        
+        raw_data = pd.read_csv(test_path)
+        testX, testY, b = data_process(raw_data)
+        scores = model.evaluate(testX, testY, verbose=0)
+        print("Test Data %s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+        
+    except Exception as e:
+        # Write out an error file. This will be returned as the failure
+        # Reason in the DescribeTrainingJob result.
+        trc = traceback.format_exc()
+        with open(os.path.join(output_path, 'failure'), 'w') as s:
+            s.write('Exception during training: ' + str(e) + '\n' + trc)
+        # Printing this causes the exception to be in the training job logs
+        print(
+            'Exception during training: ' + str(e) + '\n' + trc,
+            file=sys.stderr)
+        # A non-zero exit code causes the training job to be marked as Failed.
+        sys.exit(255)
 
-        tData.append(inputRec)
-        n=n+1
-          
-print("lCount=%s,sCount=%s" % (lCount,sCount))
-df1=pd.DataFrame(tData,columns=hData)
-df1.set_index(pd.DatetimeIndex(df1['dt']), inplace=True)
-del df1['dt']
- 
-df1.to_csv(data_file)
-print(df1.head())
-print("count=%s" % (len(df1)))
+if __name__ == '__main__':
+    train()
+
+    # A zero exit code causes the job to be marked a Succeeded.
+    sys.exit(0)
