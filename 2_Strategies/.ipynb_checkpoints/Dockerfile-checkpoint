@@ -1,5 +1,4 @@
-FROM tensorflow/tensorflow:2.1.0rc2-py3
-#FROM tensorflow/tensorflow
+FROM tensorflow/tensorflow
 
 RUN apt-get -y update && \
          apt-get install -y --no-install-recommends \
@@ -16,8 +15,6 @@ RUN wget  https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib-0.6.4
 
 
 RUN python3 -m pip install --upgrade pip
-# Install all of the packages
-# RUN wget https://bootstrap.pypa.io/get-pip.py && python get-pip.py
 RUN pip install numpy
 RUN pip install ta-lib
 RUN pip install scipy
@@ -27,12 +24,8 @@ RUN pip install --ignore-installed blinker
 RUN pip install flask
 RUN pip install gevent
 RUN pip install gunicorn
-RUN pip install tensorflow==2.2.0
-#RUN pip install tensorflow
-RUN pip install keras==2.3.1
+RUN pip install matplotlib
 RUN pip install backtrader
-#RUN pip install matplotlib
-RUN pip install matplotlib==3.2.2
 RUN pip install boto3
 
 # Env Variables
@@ -43,3 +36,4 @@ ENV PATH="/opt/program:${PATH}"
 # Set up the program in the image
 COPY model /opt/program
 WORKDIR /opt/program
+

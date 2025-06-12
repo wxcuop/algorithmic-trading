@@ -99,15 +99,21 @@ class MyStrategy(StrategyTemplate):
                 inputRec.append(self.roc[a][0])
 
         mX=[]
-        mX.append(np.array(inputRec))
         dataX=np.array(mX)
         #print("dataX=%s" % dataX)
 
         # *** ML prediction ***
-        mY=self.model.predict(dataX)
+        mX=[]
+        mX.append(np.array(inputRec))
+        dataX=np.atleast_2d(np.array(mX)) # Ensure dataX is at least 2D        
+        dataX_reshaped = dataX.reshape(dataX.shape[0], 1, dataX.shape[1])
+        mY=self.model.predict(dataX_reshaped)
+        mY_squeezed = np.squeeze(mY)
         #print("mY=%s" % mY)
-        tLong=mY[0][0]
-        tShort=mY[0][1]
+        tLong = mY_squeezed[0] # mY_squeezed will be a 1D array like [val1, val2]
+        tShort = mY_squeezed[1]
+        #tLong = mY[0][0][0]  # Accesses the first element of the innermost array
+        #tShort = mY[0][0][1] # Accesses the second element of the innermost array  
         #print("[%s]:long=%s,short=%s" % (dt,tLong,tShort))
         if not self.position:
             fLong=(tLong>self.config["long_threshold"]) 
