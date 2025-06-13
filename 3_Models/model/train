@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from keras.layers import Dropout, Dense
+from keras.layers import Input, Dropout, Dense
 from keras.models import Sequential
 # from keras.wrappers.scikit_learn import KerasClassifier
 # from keras.wrappers.scikit_learn import KerasRegressor
@@ -56,7 +56,8 @@ def build_classifier():
     global yLen
     print("build_classifier:b=%s,yLen=%s" % (b,yLen))
     model = Sequential()
-    model.add(Dense(b, input_dim=b, kernel_initializer='normal', activation='relu'))
+    model.add(Input(shape=(b,))) # For a single sample, the shape is just (b,)
+    model.add(Dense(b, kernel_initializer='normal', activation='relu'))
     model.add(Dropout(0.2))
     model.add(Dense(int(b/2), kernel_initializer='normal', activation='relu'))
     model.add(Dropout(0.2))

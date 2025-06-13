@@ -12,7 +12,7 @@ input_path = prefix + 'input/data/training'
 data_orig_file = input_path+'/data_orig.csv'
 data_file = input_path+'/data.csv'
 
-d = pd.read_csv(data_orig_file,infer_datetime_format=True, parse_dates=['dt'], index_col=['dt'])
+d = pd.read_csv(data_orig_file, parse_dates=['dt'], index_col=['dt'])
 print(d.head())
 
 repeatCount=15
