@@ -10,9 +10,10 @@ import pandas as pd
 import tensorflow as tf
 
 from keras.layers import Dropout, Dense
-from keras.wrappers.scikit_learn import KerasClassifier
 from keras.models import Sequential
-from keras.wrappers.scikit_learn import KerasRegressor
+# from keras.wrappers.scikit_learn import KerasClassifier
+# from keras.wrappers.scikit_learn import KerasRegressor
+from scikeras.wrappers import KerasClassifier, KerasRegressor
 
 yLen=2
 b=0

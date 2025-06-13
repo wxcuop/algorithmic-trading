@@ -20,7 +20,9 @@ RUN pip install numpy
 RUN pip install ta-lib
 RUN pip install scipy
 RUN pip install scikit-learn
+RUN pip install scikeras
 RUN pip install pandas
+RUN pip install --ignore-installed blinker
 RUN pip install flask
 RUN pip install gevent
 RUN pip install gunicorn
