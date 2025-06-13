@@ -106,8 +106,7 @@ class MyStrategy(StrategyTemplate):
         mX=[]
         mX.append(np.array(inputRec))
         dataX=np.atleast_2d(np.array(mX)) # Ensure dataX is at least 2D        
-        dataX_reshaped = dataX.reshape(dataX.shape[0], 1, dataX.shape[1])
-        mY=self.model.predict(dataX_reshaped)
+        mY=self.model.predict(dataX)
         mY_squeezed = np.squeeze(mY)
         #print("mY=%s" % mY)
         tLong = mY_squeezed[0] # mY_squeezed will be a 1D array like [val1, val2]
