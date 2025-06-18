@@ -1,1 +1,1 @@
-{"user": "user", "go_long": "true", "go_short": "true", "period": "50", "size": "100", "algo_name": "algo_daily_breakout", "account": "616431823260", "region": "us-east-1"}
+{"go_long": "true", "go_short": "true", "period": "50", "size": "100", "algo_name": "algo_daily_breakout", "user": "user", "account": "616431823260", "region": "us-east-1"}

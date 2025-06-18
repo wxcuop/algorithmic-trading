@@ -79,8 +79,7 @@ def train():
         #print(raw_data)
         X, y, b = data_process(raw_data)
         model = generate_model(X, y, b)
-#        model.save(os.path.join(model_path, 'model.h5'))
-        model.save(os.path.join(model_path))
+        model.save(os.path.join(model_path, 'model.h5'))
         
         print('Training is complete. Model saved.')
         
