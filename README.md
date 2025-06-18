@@ -21,6 +21,13 @@ As the team lead on this lean team of one, you'll need to wear multiple hats.  B
 At minimum, you will have an understanding how to load historical price data from external market data sources like AWS Data Exchange into S3. You get familiar how to store price data in S3 and expose it via Glue Data Catalog and Athena, how to backtested trading strategies using Amazon SageMaker, and how to train machine learning models that are used in trading strategies. You also get a basic understand how trading strategies using trend following and machine learning are developed with Python and can be optimized for better performance.
 
 ## Architecture
+First step creates the entire environments using Cloudformation - clusters (with size of 0 initally), Sagemaker environment, roles, etc. 
+
+Then, the syntetic data is generated using **1_Data/Load_Hist_Data_Daily_Public.ipynb** and placed in an S3 bucket. An AWS Glue crawler reads the data and converts it into a table, which can be querried via Athena API. Non-ML strategies (SMA and Breakout) use this data directly, whice in ML-based strategy (**2_Strategies/Strategy_Forecast.ipynb**) there is an intermediary step of trainign and testing the model using **3_Models/Train_Model_Forecast.ipynb**. Each strategy has a hyperparameter file, which can be used to run various cobinations of the parameters for backtesting. 
+
+Each strategy generates a container with all the dependencies. The container can be run locally on the notbook server, or on a Elastic Container cluster. In either case strategies generate files and matlub plots with the results
+
+During the execution logs are sent to the CloudWatch logging service
 
 ![chart](assets/algo-trading-diagram.drawio.png)
 
