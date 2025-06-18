@@ -36,7 +36,6 @@ Parameters:
     Description: Please specify your S3 bucket
     Type: String
     
-
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -206,9 +205,10 @@ Resources:
   AlgorithmicTradingInstance:
     Type: AWS::SageMaker::NotebookInstance
     Properties:
-      InstanceType: ml.t2.large
-      DefaultCodeRepository: https://github.com/aws-samples/algorithmic-trading
+      InstanceType: ml.t3.large
+      DefaultCodeRepository: https://bitbucket.org/imalinovsky/algorithmic-trading
       RoleArn: !GetAtt 'SageMakerExecutionRole.Arn'
+      PlatformIdentifier: notebook-al2-v3
 
   S3Policy:
     Type: AWS::IAM::ManagedPolicy

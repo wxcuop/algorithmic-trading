@@ -3,7 +3,7 @@
 # Learn more about .gitignore:
 #     https://www.atlassian.com/git/tutorials/saving-changes/gitignore
 
-.ipynb_checkpoints
+*.ipynb_checkpoints
 
 # Node artifact files
 node_modules/
