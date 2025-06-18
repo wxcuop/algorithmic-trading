@@ -22,7 +22,7 @@ At minimum, you will have an understanding how to load historical price data fro
 
 ## Architecture
 
-![chart](assets/arch.png)
+![chart](assets/algo-trading-diagram.drawio.png)
 
 <details>
 
