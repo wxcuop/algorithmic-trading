@@ -57,11 +57,11 @@ Generate some sample EOD price data from a public data souce. Run all the cells 
 In this module, we backtest a trend following strategy on daily price data with Amazon SageMaker. For these notebooks, please ensure that you have daily price data loaded.
 
 You can choose between the following trading strategies:
-1. **Simple Moving Average Strategy**: **2_Strategies/Strategy SMA.ipynb**
+**Simple Moving Average Strategy**: **2_Strategies/Strategy SMA.ipynb**
 
 This strategy is a moving average crossover system. It buys (goes long) when a faster-period Simple Moving Average (SMA) crosses above a slower-period SMA, signaling an uptrend. Conversely, it sells (goes short) when the faster SMA crosses below the slower SMA, indicating a downtrend. If an opposing signal occurs while a position is open, the strategy reverses its position to align with the new trend direction.
 
-2. **Daily Breakout Strategy**: **2_Strategies/Strategy_Breakout.ipynb**
+**Daily Breakout Strategy**: **2_Strategies/Strategy_Breakout.ipynb**
 This strategy, named Breakout, is a trend-following algorithm that uses highest high and the lowest low indicators over a specified period to generate trading signals.
 
 The strategy initiates a long position when the current price surpasses the highest price of the look-back period and a short position when the current price falls below the lowest price of the look-back period. It closes existing long positions if the price drops below the previous period's high and closes short positions if the price rises above the previous period's low. The strategy's behavior can be configured to only go long,only go short, or both.
@@ -75,8 +75,7 @@ In this module, we backtest a machine-learning strategy with Amazon SageMaker on
 
 Usually you will have two parts, one for training the machine learning model, and one for backtesting the strategy. You can run both notebooks or skip the training of the model as a trained model is already available in the repository:
 
-**ML Long/Short Prediction Strategy**
-* Model Training (Daily Price Data): **3_Models/Train_Model_Forecast.ipynb**
+**ML Long/Short Prediction Strategy 3_Models/Train_Model_Forecast.ipynb**
 Model:
 * Multilayer Perceptron (MLP) (Feedforward neural network)
 * 3 layers: input, hidden, output
@@ -112,7 +111,7 @@ All the generated features (normalized close, SMAs, ROCs) and the corresponding 
 This DataFrame is then saved as a CSV file (data.csv). This CSV file is the final prepared dataset ready to be used to train a machine learning model.
 In essence, this script is a feature engineering and labeling pipeline designed to create a supervised learning dataset from raw historical price data and technical indicators. The goal is to train an ML model to predict whether a "long" or "short" condition (as defined by the profit and stop targets) will be met in a future window, enabling the model to generate trading signals.
 
-* Strategy Backtesting (Daily Price Data): **2_Strategies/Strategy_Forecast.ipynb**
+**Strategy Backtesting (Daily Price Data) 2_Strategies/Strategy_Forecast.ipynb**
 This strategy, is a Machine Learning (ML)-driven long/short trading strategy built using Backtrader. It leverages a pre-trained Keras model to predict future price movements (specifically, the likelihood of a long or short opportunity) and then executes trades based on these predictions, incorporating profit targets and stop-loss levels.
 
 Here's a breakdown of its key components:
