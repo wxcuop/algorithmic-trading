@@ -160,6 +160,7 @@ This classic trend-following strategy uses two Simple Moving Averages (SMAs) wit
 - **Position Reversal:** If an opposing signal occurs while a position is open, the strategy reverses the position to align with the new trend direction.
 
 **Risk Management:**
+
 - No explicit stop-loss or take-profit; the strategy relies on signal reversals for exits.
 
 **Configuration:**
@@ -221,19 +222,19 @@ An advanced strategy that leverages a pre-trained neural network (MLP) to predic
 
 - **Trade Signals:**
 
-  - **Go Long (Buy):** If the long probability exceeds a configurable threshold.
+    - **Go Long (Buy):** If the long probability exceeds a configurable threshold.
 
-  - **Go Short (Sell):** If the short probability exceeds a configurable threshold.
+    - **Go Short (Sell):** If the short probability exceeds a configurable threshold.
 
 - **Position Management:**
 
-  - **Long Position:** Exit if price reaches a profit target (e.g., +2%) or a stop-loss (e.g., -1.5%).
+    - **Long Position:** Exit if price reaches a profit target (e.g., +2%) or a stop-loss (e.g., -1.5%).
 
-  - **Short Position:** Exit if price reaches a profit target (e.g., -2%) or a stop-loss (e.g., +1.5%).
+    - **Short Position:** Exit if price reaches a profit target (e.g., -2%) or a stop-loss (e.g., +1.5%).
 
 **Risk Management:**
 
-- Built-in via configurable profit target and stop-loss percentages.
+  - Built-in via configurable profit target and stop-loss percentages.
 
 **Configuration:**
 
