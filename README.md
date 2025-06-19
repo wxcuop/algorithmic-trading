@@ -1,138 +1,220 @@
 # Algorithmic Trading Proof-of-Concept
 
-The POC demonstrates an ML-based quant research environment. It shows how to load and store financial data on AWS from AWS Data Exchange and other external data sources and how to build and backtest algorithmic trading strategies with Amazon SageMaker that use technical indicators and advanced machine learning models.
+This proof-of-concept (POC) demonstrates a machine learning-based quantitative research environment. It shows how to load and store financial data on AWS (from AWS Data Exchange and other external sources), and how to build and backtest algorithmic trading strategies with Amazon SageMaker using technical indicators and advanced machine learning models.
 
-Each notebook contains an introduction, where discusses the rationale behind the strategy. Please remember, this is a demo, not an actual trading algo, and the training is done based on a synthetic data. I had no objective to show the alpha, just POC the idea of the quant platform setup
+> **Note:**  
+> This is a demo, not a production trading algorithm. Training is performed on synthetic data. The objective is to showcase the quant platform setup, not to demonstrate alpha generation.
 
-![chart](assets/chart.png)
+![Strategy Chart](assets/chart.png)
 
-## Regions
+---
 
-This workshop has been tested in **us-east-1**.
+## Supported AWS Region
 
-## Considerations for Each Role
-As the team lead on this lean team of one, you'll need to wear multiple hats.  Below are some things we'll cover from the perspective of each role:
-* Data Engineer - You'll modify scripts to load external market data to AWS.
-* Data Scientist - You'll need to load the data into your machine learning development environment. Once loaded, you'll understand the data, use a machine learning algorithm to train the model and do predictions.
-* Trader - You will use different trading strategies based on data to maximize Profit & Loss while attributing to Risk.
+- **us-east-1** (tested)
 
-## Goals
+---
 
-At minimum, you will have an understanding how to load historical price data from external market data sources like AWS Data Exchange into S3. You get familiar how to store price data in S3 and expose it via Glue Data Catalog and Athena, how to backtested trading strategies using Amazon SageMaker, and how to train machine learning models that are used in trading strategies. You also get a basic understand how trading strategies using trend following and machine learning are developed with Python and can be optimized for better performance.
+## Team Roles & Responsibilities
 
-## Architecture
-First step creates the entire environments using Cloudformation - clusters (with size of 0 initally), Sagemaker environment, roles, etc. 
+As a solo team lead, you'll wear multiple hats:
 
-Then, the syntetic data is generated using **1_Data/Load_Hist_Data_Daily_Public.ipynb** and placed in an S3 bucket. An AWS Glue crawler reads the data and converts it into a table, which can be querried via Athena API. Non-ML strategies (SMA and Breakout) use this data directly, whice in ML-based strategy (**2_Strategies/Strategy_Forecast.ipynb**) there is an intermediary step of trainign and testing the model using **3_Models/Train_Model_Forecast.ipynb**. Each strategy has a hyperparameter file, which can be used to run various cobinations of the parameters for backtesting. 
+- **Data Engineer:** Modify scripts to load external market data into AWS.
+- **Data Scientist:** Load data into your ML environment, analyze it, train models, and make predictions.
+- **Trader:** Use different trading strategies to maximize profit & loss while managing risk.
 
-Each strategy generates a container with all the dependencies. The container can be run locally on the notbook server, or on a Elastic Container cluster. In either case strategies generate files and matlub plots with the results
+---
 
-During the execution logs are sent to the CloudWatch logging service
+## Project Goals
 
-![chart](assets/algo-trading-diagram.drawio.png)
+By the end of this POC, you will:
+
+- Understand how to load historical price data from external sources (like AWS Data Exchange) into S3.
+- Learn to store price data in S3, expose it via Glue Data Catalog and Athena, and backtest trading strategies using Amazon SageMaker.
+- Train machine learning models for use in trading strategies.
+- Gain a basic understanding of developing and optimizing trend-following and ML-based trading strategies in Python.
+
+---
+
+## Architecture Overview
+
+1. **Environment Setup:**  
+   Use CloudFormation to create the environment (clusters, SageMaker, roles, etc.).
+
+2. **Data Generation:**  
+   Generate synthetic data with `1_Data/Load_Hist_Data_Daily_Public.ipynb` and store it in S3.
+
+3. **Data Cataloging:**  
+   Use AWS Glue to crawl the data and create a table, queryable via Athena.
+
+4. **Strategy Backtesting:**  
+   - Non-ML strategies (SMA, Breakout) use the data directly.
+   - ML-based strategies (`2_Strategies/Strategy_Forecast.ipynb`) involve an intermediate model training step (`3_Models/Train_Model_Forecast.ipynb`).
+
+5. **Parameter Optimization:**  
+   Each strategy has a hyperparameter file for running various parameter combinations during backtesting.
+
+6. **Containerization:**  
+   Strategies are containerized and can run locally or on an Elastic Container cluster. Results (files and plots) are generated in both cases.
+
+7. **Logging:**  
+   Execution logs are sent to AWS CloudWatch.
+
+![Architecture Diagram](assets/algo-trading-diagram.drawio.png)
 
 <details>
+<summary>Dependencies</summary>
 
-** backtrader; version 1.9.74.123 -- https://www.backtrader.com/
+- **backtrader** v1.9.74.123 — [https://www.backtrader.com/](https://www.backtrader.com/)
 </details>
+
+---
 
 ## Acknowledgements
 
-The work is based on the blog Post (Feb 2021): Algorithmic Trading with SageMaker and AWS Data Exchange: https://aws.amazon.com/blogs/industries/algorithmic-trading-on-aws-with-amazon-sagemaker-and-aws-data-exchange/
-Thanks to authors of this post for the ideas and code contribution
+This work is based on the AWS blog post:  
+[Algorithmic Trading with SageMaker and AWS Data Exchange (Feb 2021)](https://aws.amazon.com/blogs/industries/algorithmic-trading-on-aws-with-amazon-sagemaker-and-aws-data-exchange/)  
+Thanks to the authors for their ideas and code contributions.
 
-## Instructions using SageMaker Notebooks
+---
 
-## Step 0: Set up environment
+## Quick Start: SageMaker Notebooks
 
-#. Create a new unique S3 bucket that starts with "**algotrading-**" (e.g. "**algotrading-YYYY-MM-DD-XYZ**") that we use for storing external price data. 
-#. For the base infrastructure components (SageMaker Notebook, Athena, Glue Tables), deploy the following [CloudFormation template](https://github.com/aws-samples/algorithmic-trading/raw/master/0_Setup/algo-reference.yaml). Go to [CloudFormation](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=algotrading) and upload the downloaded CF template. For the S3 bucket specify the previously created bucket name. Verify that stackName is **algotrading** before creating the stack and acknowledge that IAM changes will be made.
+### Step 0: Set Up Environment
 
-## Step 1: Load Historical Price Data
+1. **Create S3 Bucket:**  
+   Create a unique S3 bucket starting with `algotrading-` (e.g., `algotrading-YYYY-MM-DD-XYZ`) for storing external price data.
 
-Generate some sample EOD price data from a public data souce. Run all the cells in **1_Data/Load_Hist_Data_Daily_Public.ipynb**.
+2. **Deploy Infrastructure:**  
+   Deploy the [CloudFormation template](https://github.com/aws-samples/algorithmic-trading/raw/master/0_Setup/algo-reference.yaml) for SageMaker Notebook, Athena, and Glue Tables.  
+   - Go to [CloudFormation](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=algotrading) and upload the template.
+   - Specify your S3 bucket name.
+   - Ensure the stack name is `algotrading` and acknowledge IAM changes.
 
-## Step 2: Backtest a trend following strategy (or move directly to Step 3)
+---
 
-In this module, we backtest a trend following strategy on daily price data with Amazon SageMaker. For these notebooks, please ensure that you have daily price data loaded.
+### Step 1: Load Historical Price Data
 
-You can choose between the following trading strategies:
-**Simple Moving Average Strategy**: **2_Strategies/Strategy SMA.ipynb**
+- Generate sample EOD price data from a public source.
+- Run all cells in `1_Data/Load_Hist_Data_Daily_Public.ipynb`.
 
-This strategy is a moving average crossover system. It buys (goes long) when a faster-period Simple Moving Average (SMA) crosses above a slower-period SMA, signaling an uptrend. Conversely, it sells (goes short) when the faster SMA crosses below the slower SMA, indicating a downtrend. If an opposing signal occurs while a position is open, the strategy reverses its position to align with the new trend direction.
+---
 
-**Daily Breakout Strategy**: **2_Strategies/Strategy_Breakout.ipynb**
-This strategy, named Breakout, is a trend-following algorithm that uses highest high and the lowest low indicators over a specified period to generate trading signals.
+### Step 2: Backtest a Trend-Following Strategy
 
-The strategy initiates a long position when the current price surpasses the highest price of the look-back period and a short position when the current price falls below the lowest price of the look-back period. It closes existing long positions if the price drops below the previous period's high and closes short positions if the price rises above the previous period's low. The strategy's behavior can be configured to only go long,only go short, or both.
+Backtest a trend-following strategy on daily price data with Amazon SageMaker. Ensure daily price data is loaded.
 
+**Available Strategies:**
 
-Select the Jupyter Notebook for backtesting the strategy in the folder **2_Strategies** for your selected strategy and run it from your Amazon SageMaker Notebook instance. In the instructions, there is guidance on how to optimize the strategy.
+- **Simple Moving Average (SMA) Strategy:**  
+  `2_Strategies/Strategy SMA.ipynb`  
+  - Buys when a fast SMA crosses above a slow SMA (uptrend).
+  - Sells when a fast SMA crosses below a slow SMA (downtrend).
+  - Reverses position on opposing signals.
 
-## Step 3: Backtest a machine-learning based strategy
+- **Daily Breakout Strategy:**  
+  `2_Strategies/Strategy_Breakout.ipynb`  
+  - Buys when the price exceeds the highest high of the look-back period.
+  - Sells when the price falls below the lowest low of the look-back period.
+  - Configurable to go long, short, or both.
 
-In this module, we backtest a machine-learning strategy with Amazon SageMaker on daily or intraday price data. Please ensure that you have daily or intraday price data loaded before running the corresponding notebooks.
+> **Tip:**  
+> Select the appropriate Jupyter Notebook in `2_Strategies` and follow the instructions for strategy optimization.
 
-Usually you will have two parts, one for training the machine learning model, and one for backtesting the strategy. You can run both notebooks or skip the training of the model as a trained model is already available in the repository:
+---
 
-**ML Long/Short Prediction Strategy 3_Models/Train_Model_Forecast.ipynb**
-Model:
-* Multilayer Perceptron (MLP) (Feedforward neural network)
-* 3 layers: input, hidden, output
-* Binary Classification
-* `Input`: Close, SMA(2 to 16), ROC(2 to 16)
-* `Output`: Does a long or short trade hit the profit target (2%) without hitting a stop loss (1.5%) in the next five days?
+### Step 3: Backtest a Machine Learning-Based Strategy
 
-This script describes a data pre-processing strategy for generating a machine learning dataset for an algorithmic trading model, rather than being a trading strategy itself. Its primary goal is to create labeled historical data that a machine learning model can learn from to predict future price movements (specifically, whether a long or short trade would be profitable).
+Backtest an ML-based strategy with Amazon SageMaker on daily or intraday price data.
 
-Here's a breakdown of the process:
+- **Training:**  
+  - `3_Models/Train_Model_Forecast.ipynb`  
+    - Multilayer Perceptron (MLP) with 3 layers (input, hidden, output).
+    - Binary classification:  
+      - **Input:** Close, SMA(2–16), ROC(2–16)  
+      - **Output:** Will a long/short trade hit a 2% profit target without hitting a 1.5% stop loss in the next 5 days?
+    - Data is normalized and labeled for ML.
 
-Data Loading and Indicator Calculation:
-It loads historical price data (with dt, close, etc.) from a CSV file.
-It calculates multiple Simple Moving Averages (SMAs) and Rates of Change (ROCs) with varying timeperiod values (determined by repeatCount and repeatStep). These technical indicators will serve as features for the ML model.
+- **Backtesting:**  
+  - `2_Strategies/Strategy_Forecast.ipynb`  
+    - Loads a pre-trained Keras model.
+    - Prepares input features (normalized close, SMAs, ROCs).
+    - Predicts long/short opportunities.
+    - Executes trades based on predictions and configurable thresholds.
+    - Manages risk with profit targets and stop-losses.
 
-Feature Engineering and Normalization:
-For each historical data point, it constructs an "input record" that includes:
-* The current closing price.
-* The calculated SMA values.
-* The calculated ROC values.
-* A crucial step is the normalization of the close price and SMA values. They are scaled to a range between 0 and 1, which is common practice for neural networks and other ML models to improve training stability and performance. ROC values are appended directly.
+---
 
+## Strategy Details
 
-Labeling (Target Variable Creation): This is the core of preparing the data for ML.
-For each data point, it looks forwardWindow days into the future (e.g., 5 days).
-It then checks two conditions to assign labels:
-* "Long" Label (1 or 0): A "long" label is assigned if, within the forwardWindow, the price reaches a profitTarget (e.g., 2% above the current close) AND it does not hit a stopTarget (e.g., 1.5% below the current close) first. This indicates a potential profitable long trade.
-* "Short" Label (1 or 0): A "short" label is assigned if, within the forwardWindow, the price reaches a profitTarget (e.g., 2% below the current close) AND it does not hit a stopTarget (e.g., 1.5% above the current close) first. This indicates a potential profitable short trade.
-The lCount and sCount variables track how many instances of profitable long and short opportunities are found.
+### 1. Simple Moving Average (SMA) Crossover Strategy
 
-Dataset Export:
-All the generated features (normalized close, SMAs, ROCs) and the corresponding "long" and "short" labels are assembled into a new Pandas DataFrame.
-This DataFrame is then saved as a CSV file (data.csv). This CSV file is the final prepared dataset ready to be used to train a machine learning model.
-In essence, this script is a feature engineering and labeling pipeline designed to create a supervised learning dataset from raw historical price data and technical indicators. The goal is to train an ML model to predict whether a "long" or "short" condition (as defined by the profit and stop targets) will be met in a future window, enabling the model to generate trading signals.
+This classic trend-following strategy uses two Simple Moving Averages (SMAs) with different periods:
+- **Fast SMA:** Shorter period, reacts quickly to price changes.
+- **Slow SMA:** Longer period, smooths out price fluctuations.
 
-**Strategy Backtesting (Daily Price Data) 2_Strategies/Strategy_Forecast.ipynb**
-This strategy, is a Machine Learning (ML)-driven long/short trading strategy built using Backtrader. It leverages a pre-trained Keras model to predict future price movements (specifically, the likelihood of a long or short opportunity) and then executes trades based on these predictions, incorporating profit targets and stop-loss levels.
+**Logic:**
+- **Go Long (Buy):** When the fast SMA crosses above the slow SMA, signaling an uptrend.
+- **Go Short (Sell):** When the fast SMA crosses below the slow SMA, signaling a downtrend.
+- **Position Reversal:** If an opposing signal occurs while a position is open, the strategy reverses the position to align with the new trend direction.
 
-Here's a breakdown of its key components:
+**Risk Management:**
+- No explicit stop-loss or take-profit; the strategy relies on signal reversals for exits.
 
-Machine Learning Model Integration:
+**Configuration:**
+- `fast_period`: Period for the fast SMA.
+- `slow_period`: Period for the slow SMA.
+- `size`: Trade size per signal.
 
-The strategy loads a pre-trained Keras model (model_long_short_predict.h5) during its initialization. This model is the core of its decision-making.
-In the next method, it prepares input data for the model. This input consists of the current closing price, and a set of Simple Moving Averages (SMAs) and Rates of Change (ROCs) calculated over various time periods.
-The SMA values are normalized (scaled between 0 and 1) before being fed into the model, ensuring consistent input ranges. ROC values are used as is.
-The pre-trained model then makes a prediction (mY) which typically outputs two values: tLong (the prediction for a long opportunity) and tShort (the prediction for a short opportunity).
-Trading Logic based on ML Predictions:
+---
 
-If there is no open position:
-* It checks if tLong (the prediction for a long trade) exceeds a configured long_threshold. If true, it places a buy order.
-* It checks if tShort (the prediction for a short trade) exceeds a configured short_threshold. If true, it places a sell order.
+### 2. Daily Breakout Strategy
 
-If a position is open:
-* For a long position: It checks if the current closing price (cl) has reached the pre-defined profitTarget or has fallen to the stopTarget. If either condition is met, it closes the position (sells).
-* For a short position: It checks if the current closing price (cl) has reached the pre-defined profitTarget (by falling to a certain level) or has risen to the stopTarget. If either condition is met, it closes the position (buys).
+A momentum-based strategy that seeks to capture strong price movements by identifying breakouts from recent highs or lows.
 
-Risk Management:
+**Logic:**
+- **Go Long (Buy):** When the current price exceeds the highest high over a configurable look-back period.
+- **Go Short (Sell):** When the current price falls below the lowest low over the look-back period.
+- **Exit Long:** If the price drops below the previous period's high.
+- **Exit Short:** If the price rises above the previous period's low.
+- The strategy can be configured to only go long, only go short, or both.
 
-The strategy incorporates built-in risk management with configurable profit_target_pct and stop_target_pct. These percentages are used to calculate the specific limitPrice (for profit taking) and stopPrice (for loss cutting) immediately after an order is placed.
-In summary, this strategy uses a deep learning model to generate trading signals (long or short) based on a combination of raw price and calculated technical indicators. It then executes trades based on these signals, always with pre-determined profit targets and stop-loss levels to manage risk.
+**Risk Management:**
+- Exits are triggered by price reversals relative to the breakout levels.
+
+**Configuration:**
+- `period`: Look-back period for high/low calculation.
+- `go_long`: Enable/disable long trades.
+- `go_short`: Enable/disable short trades.
+- `size`: Trade size per signal.
+
+---
+
+### 3. Machine Learning Long/Short Prediction Strategy
+
+An advanced strategy that leverages a pre-trained neural network (MLP) to predict the probability of profitable long or short trades, using technical indicators as features.
+
+**Logic:**
+- **Feature Engineering:**
+  - Inputs: Current close price, multiple SMAs (2–16), and Rates of Change (ROCs) over various periods.
+  - SMAs are normalized; ROCs are used as-is.
+- **ML Model Prediction:**
+  - The model outputs two probabilities: one for a long opportunity, one for a short opportunity.
+- **Trade Signals:**
+  - **Go Long (Buy):** If the long probability exceeds a configurable threshold.
+  - **Go Short (Sell):** If the short probability exceeds a configurable threshold.
+- **Position Management:**
+  - **Long Position:** Exit if price reaches a profit target (e.g., +2%) or a stop-loss (e.g., -1.5%).
+  - **Short Position:** Exit if price reaches a profit target (e.g., -2%) or a stop-loss (e.g., +1.5%).
+
+**Risk Management:**
+- Built-in via configurable profit target and stop-loss percentages.
+
+**Configuration:**
+- `long_threshold`: Probability threshold for entering long trades.
+- `short_threshold`: Probability threshold for entering short trades.
+- `profit_target_pct`: Profit target as a percentage.
+- `stop_target_pct`: Stop-loss as a percentage.
+- `size`: Trade size per signal.
+
+---
