@@ -62,11 +62,6 @@ By the end of this POC, you will:
 
 ![Architecture Diagram](assets/algo-trading-diagram.drawio.png)
 
-<details>
-<summary>Dependencies</summary>
-
-- **backtrader** v1.9.74.123 — [https://www.backtrader.com/](https://www.backtrader.com/)
-</details>
 
 ---
 
@@ -179,29 +174,29 @@ A momentum-based strategy that seeks to capture strong price movements by identi
 
 **Logic:**
 
-- **Go Long (Buy):** When the current price exceeds the highest high over a configurable look-back period.
+  - **Go Long (Buy):** When the current price exceeds the highest high over a configurable look-back period.
 
-- **Go Short (Sell):** When the current price falls below the lowest low over the look-back period.
+  - **Go Short (Sell):** When the current price falls below the lowest low over the look-back period.
 
-- **Exit Long:** If the price drops below the previous period's high.
+  - **Exit Long:** If the price drops below the previous period's high.
 
-- **Exit Short:** If the price rises above the previous period's low.
+  - **Exit Short:** If the price rises above the previous period's low.
 
 - The strategy can be configured to only go long, only go short, or both.
 
 **Risk Management:**
 
-- Exits are triggered by price reversals relative to the breakout levels.
+  - Exits are triggered by price reversals relative to the breakout levels.
 
 **Configuration:**
 
-- `period`: Look-back period for high/low calculation.
+  - `period`: Look-back period for high/low calculation.
 
-- `go_long`: Enable/disable long trades.
+  - `go_long`: Enable/disable long trades.
 
-- `go_short`: Enable/disable short trades.
+  - `go_short`: Enable/disable short trades.
 
-- `size`: Trade size per signal.
+  - `size`: Trade size per signal.
 
 ---
 
@@ -213,12 +208,12 @@ An advanced strategy that leverages a pre-trained neural network (MLP) to predic
 
 - **Feature Engineering:**
 
-  - Inputs: Current close price, multiple SMAs (2–16), and Rates of Change (ROCs) over various periods.
+    - Inputs: Current close price, multiple SMAs (2–16), and Rates of Change (ROCs) over various periods.
 
-  - SMAs are normalized; ROCs are used as-is.
+    - SMAs are normalized; ROCs are used as-is.
 
 - **ML Model Prediction:**
-  - The model outputs two probabilities: one for a long opportunity, one for a short opportunity.
+    - The model outputs two probabilities: one for a long opportunity, one for a short opportunity.
 
 - **Trade Signals:**
 
@@ -238,14 +233,14 @@ An advanced strategy that leverages a pre-trained neural network (MLP) to predic
 
 **Configuration:**
 
-- `long_threshold`: Probability threshold for entering long trades.
+  - `long_threshold`: Probability threshold for entering long trades.
 
-- `short_threshold`: Probability threshold for entering short trades.
+  - `short_threshold`: Probability threshold for entering short trades.
 
-- `profit_target_pct`: Profit target as a percentage.
+  - `profit_target_pct`: Profit target as a percentage. 
 
-- `stop_target_pct`: Stop-loss as a percentage.
+  - `stop_target_pct`: Stop-loss as a percentage.
 
-- `size`: Trade size per signal.
+  - `size`: Trade size per signal.
 
 ---
