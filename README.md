@@ -106,14 +106,12 @@ Backtest a trend-following strategy on daily price data with Amazon SageMaker. E
 
 **Available Strategies:**
 
-- **Simple Moving Average (SMA) Strategy:**  
-  `2_Strategies/Strategy SMA.ipynb`  
+- **Simple Moving Average (SMA) Strategy:**  `2_Strategies/Strategy SMA.ipynb`  
   - Buys when a fast SMA crosses above a slow SMA (uptrend).
   - Sells when a fast SMA crosses below a slow SMA (downtrend).
   - Reverses position on opposing signals.
 
-- **Daily Breakout Strategy:**  
-  `2_Strategies/Strategy_Breakout.ipynb`  
+- **Daily Breakout Strategy:**  `2_Strategies/Strategy_Breakout.ipynb`  
   - Buys when the price exceeds the highest high of the look-back period.
   - Sells when the price falls below the lowest low of the look-back period.
   - Configurable to go long, short, or both.
@@ -127,16 +125,14 @@ Backtest a trend-following strategy on daily price data with Amazon SageMaker. E
 
 Backtest an ML-based strategy with Amazon SageMaker on daily or intraday price data.
 
-- **Training:**  
-  - `3_Models/Train_Model_Forecast.ipynb`  
+- **Training:** `3_Models/Train_Model_Forecast.ipynb`  
     - Multilayer Perceptron (MLP) with 3 layers (input, hidden, output).
     - Binary classification:  
       - **Input:** Close, SMA(2–16), ROC(2–16)  
       - **Output:** Will a long/short trade hit a 2% profit target without hitting a 1.5% stop loss in the next 5 days?
     - Data is normalized and labeled for ML.
 
-- **Backtesting:**  
-  - `2_Strategies/Strategy_Forecast.ipynb`  
+- **Backtesting:** `2_Strategies/Strategy_Forecast.ipynb`  
     - Loads a pre-trained Keras model.
     - Prepares input features (normalized close, SMAs, ROCs).
     - Predicts long/short opportunities.
@@ -150,20 +146,28 @@ Backtest an ML-based strategy with Amazon SageMaker on daily or intraday price d
 ### 1. Simple Moving Average (SMA) Crossover Strategy
 
 This classic trend-following strategy uses two Simple Moving Averages (SMAs) with different periods:
+
 - **Fast SMA:** Shorter period, reacts quickly to price changes.
+
 - **Slow SMA:** Longer period, smooths out price fluctuations.
 
 **Logic:**
+
 - **Go Long (Buy):** When the fast SMA crosses above the slow SMA, signaling an uptrend.
+
 - **Go Short (Sell):** When the fast SMA crosses below the slow SMA, signaling a downtrend.
+
 - **Position Reversal:** If an opposing signal occurs while a position is open, the strategy reverses the position to align with the new trend direction.
 
 **Risk Management:**
 - No explicit stop-loss or take-profit; the strategy relies on signal reversals for exits.
 
 **Configuration:**
+
 - `fast_period`: Period for the fast SMA.
+
 - `slow_period`: Period for the slow SMA.
+
 - `size`: Trade size per signal.
 
 ---
@@ -173,19 +177,29 @@ This classic trend-following strategy uses two Simple Moving Averages (SMAs) wit
 A momentum-based strategy that seeks to capture strong price movements by identifying breakouts from recent highs or lows.
 
 **Logic:**
+
 - **Go Long (Buy):** When the current price exceeds the highest high over a configurable look-back period.
+
 - **Go Short (Sell):** When the current price falls below the lowest low over the look-back period.
+
 - **Exit Long:** If the price drops below the previous period's high.
+
 - **Exit Short:** If the price rises above the previous period's low.
+
 - The strategy can be configured to only go long, only go short, or both.
 
 **Risk Management:**
+
 - Exits are triggered by price reversals relative to the breakout levels.
 
 **Configuration:**
+
 - `period`: Look-back period for high/low calculation.
+
 - `go_long`: Enable/disable long trades.
+
 - `go_short`: Enable/disable short trades.
+
 - `size`: Trade size per signal.
 
 ---
@@ -195,26 +209,42 @@ A momentum-based strategy that seeks to capture strong price movements by identi
 An advanced strategy that leverages a pre-trained neural network (MLP) to predict the probability of profitable long or short trades, using technical indicators as features.
 
 **Logic:**
+
 - **Feature Engineering:**
+
   - Inputs: Current close price, multiple SMAs (2–16), and Rates of Change (ROCs) over various periods.
+
   - SMAs are normalized; ROCs are used as-is.
+
 - **ML Model Prediction:**
   - The model outputs two probabilities: one for a long opportunity, one for a short opportunity.
+
 - **Trade Signals:**
+
   - **Go Long (Buy):** If the long probability exceeds a configurable threshold.
+
   - **Go Short (Sell):** If the short probability exceeds a configurable threshold.
+
 - **Position Management:**
+
   - **Long Position:** Exit if price reaches a profit target (e.g., +2%) or a stop-loss (e.g., -1.5%).
+
   - **Short Position:** Exit if price reaches a profit target (e.g., -2%) or a stop-loss (e.g., +1.5%).
 
 **Risk Management:**
+
 - Built-in via configurable profit target and stop-loss percentages.
 
 **Configuration:**
+
 - `long_threshold`: Probability threshold for entering long trades.
+
 - `short_threshold`: Probability threshold for entering short trades.
+
 - `profit_target_pct`: Profit target as a percentage.
+
 - `stop_target_pct`: Stop-loss as a percentage.
+
 - `size`: Trade size per signal.
 
 ---
