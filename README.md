@@ -58,7 +58,14 @@ In this module, we backtest a trend following strategy on daily price data with 
 
 You can choose between the following trading strategies:
 1. **Simple Moving Average Strategy**: **2_Strategies/Strategy SMA.ipynb**
+
+This strategy is a moving average crossover system. It buys (goes long) when a faster-period Simple Moving Average (SMA) crosses above a slower-period SMA, signaling an uptrend. Conversely, it sells (goes short) when the faster SMA crosses below the slower SMA, indicating a downtrend. If an opposing signal occurs while a position is open, the strategy reverses its position to align with the new trend direction.
+
 2. **Daily Breakout Strategy**: **2_Strategies/Strategy_Breakout.ipynb**
+This strategy, named Breakout, is a trend-following algorithm that uses highest high and the lowest low indicators over a specified period to generate trading signals.
+
+The strategy initiates a long position when the current price surpasses the highest price of the look-back period and a short position when the current price falls below the lowest price of the look-back period. It closes existing long positions if the price drops below the previous period's high and closes short positions if the price rises above the previous period's low. The strategy's behavior can be configured to only go long,only go short, or both.
+
 
 Select the Jupyter Notebook for backtesting the strategy in the folder **2_Strategies** for your selected strategy and run it from your Amazon SageMaker Notebook instance. In the instructions, there is guidance on how to optimize the strategy.
 
@@ -69,6 +76,64 @@ In this module, we backtest a machine-learning strategy with Amazon SageMaker on
 Usually you will have two parts, one for training the machine learning model, and one for backtesting the strategy. You can run both notebooks or skip the training of the model as a trained model is already available in the repository:
 
 **ML Long/Short Prediction Strategy**
-* Model Training (Daily Price Data) (Optional): **3_Models/Train_Model_Forecast.ipynb**
-* Strategy Backtesting (Daily Price Data): **2_Strategies/Strategy_Forecast.ipynb**
+* Model Training (Daily Price Data): **3_Models/Train_Model_Forecast.ipynb**
+Model:
+* Multilayer Perceptron (MLP) (Feedforward neural network)
+* 3 layers: input, hidden, output
+* Binary Classification
+* `Input`: Close, SMA(2 to 16), ROC(2 to 16)
+* `Output`: Does a long or short trade hit the profit target (2%) without hitting a stop loss (1.5%) in the next five days?
 
+This script describes a data pre-processing strategy for generating a machine learning dataset for an algorithmic trading model, rather than being a trading strategy itself. Its primary goal is to create labeled historical data that a machine learning model can learn from to predict future price movements (specifically, whether a long or short trade would be profitable).
+
+Here's a breakdown of the process:
+
+Data Loading and Indicator Calculation:
+It loads historical price data (with dt, close, etc.) from a CSV file.
+It calculates multiple Simple Moving Averages (SMAs) and Rates of Change (ROCs) with varying timeperiod values (determined by repeatCount and repeatStep). These technical indicators will serve as features for the ML model.
+
+Feature Engineering and Normalization:
+For each historical data point, it constructs an "input record" that includes:
+* The current closing price.
+* The calculated SMA values.
+* The calculated ROC values.
+* A crucial step is the normalization of the close price and SMA values. They are scaled to a range between 0 and 1, which is common practice for neural networks and other ML models to improve training stability and performance. ROC values are appended directly.
+
+
+Labeling (Target Variable Creation): This is the core of preparing the data for ML.
+For each data point, it looks forwardWindow days into the future (e.g., 5 days).
+It then checks two conditions to assign labels:
+* "Long" Label (1 or 0): A "long" label is assigned if, within the forwardWindow, the price reaches a profitTarget (e.g., 2% above the current close) AND it does not hit a stopTarget (e.g., 1.5% below the current close) first. This indicates a potential profitable long trade.
+* "Short" Label (1 or 0): A "short" label is assigned if, within the forwardWindow, the price reaches a profitTarget (e.g., 2% below the current close) AND it does not hit a stopTarget (e.g., 1.5% above the current close) first. This indicates a potential profitable short trade.
+The lCount and sCount variables track how many instances of profitable long and short opportunities are found.
+
+Dataset Export:
+All the generated features (normalized close, SMAs, ROCs) and the corresponding "long" and "short" labels are assembled into a new Pandas DataFrame.
+This DataFrame is then saved as a CSV file (data.csv). This CSV file is the final prepared dataset ready to be used to train a machine learning model.
+In essence, this script is a feature engineering and labeling pipeline designed to create a supervised learning dataset from raw historical price data and technical indicators. The goal is to train an ML model to predict whether a "long" or "short" condition (as defined by the profit and stop targets) will be met in a future window, enabling the model to generate trading signals.
+
+* Strategy Backtesting (Daily Price Data): **2_Strategies/Strategy_Forecast.ipynb**
+This strategy, is a Machine Learning (ML)-driven long/short trading strategy built using Backtrader. It leverages a pre-trained Keras model to predict future price movements (specifically, the likelihood of a long or short opportunity) and then executes trades based on these predictions, incorporating profit targets and stop-loss levels.
+
+Here's a breakdown of its key components:
+
+Machine Learning Model Integration:
+
+The strategy loads a pre-trained Keras model (model_long_short_predict.h5) during its initialization. This model is the core of its decision-making.
+In the next method, it prepares input data for the model. This input consists of the current closing price, and a set of Simple Moving Averages (SMAs) and Rates of Change (ROCs) calculated over various time periods.
+The SMA values are normalized (scaled between 0 and 1) before being fed into the model, ensuring consistent input ranges. ROC values are used as is.
+The pre-trained model then makes a prediction (mY) which typically outputs two values: tLong (the prediction for a long opportunity) and tShort (the prediction for a short opportunity).
+Trading Logic based on ML Predictions:
+
+If there is no open position:
+* It checks if tLong (the prediction for a long trade) exceeds a configured long_threshold. If true, it places a buy order.
+* It checks if tShort (the prediction for a short trade) exceeds a configured short_threshold. If true, it places a sell order.
+
+If a position is open:
+* For a long position: It checks if the current closing price (cl) has reached the pre-defined profitTarget or has fallen to the stopTarget. If either condition is met, it closes the position (sells).
+* For a short position: It checks if the current closing price (cl) has reached the pre-defined profitTarget (by falling to a certain level) or has risen to the stopTarget. If either condition is met, it closes the position (buys).
+
+Risk Management:
+
+The strategy incorporates built-in risk management with configurable profit_target_pct and stop_target_pct. These percentages are used to calculate the specific limitPrice (for profit taking) and stopPrice (for loss cutting) immediately after an order is placed.
+In summary, this strategy uses a deep learning model to generate trading signals (long or short) based on a combination of raw price and calculated technical indicators. It then executes trades based on these signals, always with pre-determined profit targets and stop-loss levels to manage risk.
