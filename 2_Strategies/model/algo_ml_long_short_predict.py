@@ -100,7 +100,6 @@ class MyStrategy(StrategyTemplate):
 
         mX=[]
         dataX=np.array(mX)
-        #print("dataX=%s" % dataX)
 
         # *** ML prediction ***
         mX=[]
@@ -108,12 +107,8 @@ class MyStrategy(StrategyTemplate):
         dataX=np.atleast_2d(np.array(mX)) # Ensure dataX is at least 2D        
         mY=self.model.predict(dataX)
         mY_squeezed = np.squeeze(mY)
-        #print("mY=%s" % mY)
         tLong = mY_squeezed[0] # mY_squeezed will be a 1D array like [val1, val2]
         tShort = mY_squeezed[1]
-        #tLong = mY[0][0][0]  # Accesses the first element of the innermost array
-        #tShort = mY[0][0][1] # Accesses the second element of the innermost array  
-        #print("[%s]:long=%s,short=%s" % (dt,tLong,tShort))
         if not self.position:
             fLong=(tLong>self.config["long_threshold"]) 
             fShort=(tShort>self.config["short_threshold"])
