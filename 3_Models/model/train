@@ -11,14 +11,12 @@ import tensorflow as tf
 
 from keras.layers import Input, Dropout, Dense
 from keras.models import Sequential
-# from keras.wrappers.scikit_learn import KerasClassifier
-# from keras.wrappers.scikit_learn import KerasRegressor
 from scikeras.wrappers import KerasClassifier, KerasRegressor
 
-yLen=2
+yLen=2 # Target variable is one-hot encoded (i.e [0,1], [1,0] etc). it represents log/short decision
 b=0
 
-# Optional
+# Tensorflow verbosity
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # These are the paths to where SageMaker mounts interesting things in your
@@ -33,20 +31,21 @@ model_path = os.path.join(prefix, 'model')
 
 # Process and prepare the data
 def data_process(df):
-    global yLen
-    global b
+    global yLen # number of output classes
+    global b  # number of input features
     dataX=[]
     dataY=[]
     for idx,row in df.iterrows():
         row1=[]
-        r=row[1:len(row)-yLen]
+        r=row[1:len(row)-yLen]  # Exctract features
         for a in r:
             row1.append(a)
         x=np.array(row1)
-        y=np.array(row[len(row)-yLen:])
+        y=np.array(row[len(row)-yLen:])  # Extract targets
         b=len(x)
         dataX.append(x)
         dataY.append(y)
+    # Converts the list of feature arrays into a single NumPy (common for neural networks)        
     dataX=np.array(dataX).astype(np.float32)
     dataY=np.array(dataY).astype(np.float32)
     return dataX,dataY,b
@@ -58,10 +57,10 @@ def build_classifier():
     model = Sequential()
     model.add(Input(shape=(b,))) # For a single sample, the shape is just (b,)
     model.add(Dense(b, kernel_initializer='normal', activation='relu'))
-    model.add(Dropout(0.2))
+    model.add(Dropout(0.2)) # Drop 20% of the neurons from the previous layer to prevent overfitting
     model.add(Dense(int(b/2), kernel_initializer='normal', activation='relu'))
     model.add(Dropout(0.2))
-    model.add(Dense(yLen,kernel_initializer='normal', activation='sigmoid'))
+    model.add(Dense(yLen,kernel_initializer='normal', activation='sigmoid')) # squashes cells into numbers between 0 and 1
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
 
@@ -76,7 +75,6 @@ def train():
     print('Starting the training.')
     try:
         raw_data = pd.read_csv(input_path)
-        #print(raw_data)
         X, y, b = data_process(raw_data)
         model = generate_model(X, y, b)
         model.save(os.path.join(model_path, 'model.h5'))
