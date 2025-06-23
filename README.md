@@ -1,9 +1,9 @@
 # Algorithmic Trading Proof-of-Concept
 
-This proof-of-concept (POC) demonstrates a machine learning-based quantitative research environment. It shows how to load and store financial data on AWS (from AWS Data Exchange and other external sources), and how to build and backtest algorithmic trading strategies with Amazon SageMaker using technical indicators and advanced machine learning models.
+This proof-of-concept (POC) demonstrates a machine learning-based quantitative research environment. It shows how to load and store financial data on AWS (from AWS Data Exchange and other external sources), and how to build and backtest algorithmic trading strategies with Amazon SageMaker using technical indicators and advanced machine learning models. 
 
 > **Note:**  
-> This is a demo, not a production trading algorithm. Training is performed on synthetic data. The objective is to showcase the quant platform setup, not to demonstrate alpha generation.
+> The idea here is to demonstrate the MLOps pipeline. There are three reasonably realistic algos I developed to demonstrate that. This is a demo, not a production trading algorithm. Training is performed on synthetic data. The objective is to showcase the quant platform setup, not to demonstrate a real alpha.
 
 ![Strategy Chart](assets/chart.png)
 
@@ -20,8 +20,8 @@ This proof-of-concept (POC) demonstrates a machine learning-based quantitative r
 As a solo team lead, you'll wear multiple hats:
 
 - **Data Engineer:** Modify scripts to load external market data into AWS.
-- **Data Scientist:** Load data into your ML environment, analyze it, train models, and make predictions.
-- **Trader:** Use different trading strategies to maximize profit & loss while managing risk.
+- **Quant and Quant Developer:** Load data into your ML environment, analyze it, train models, and make predictions.
+- **Trader:** Use different trading strategies to monetize alpha while managing risk.
 
 ---
 
@@ -29,7 +29,7 @@ As a solo team lead, you'll wear multiple hats:
 
 By the end of this POC, you will:
 
-- Understand how to load historical price data from external sources (like AWS Data Exchange) into S3.
+- Understand how to load historical price data from external sources into S3.
 - Learn to store price data in S3, expose it via Glue Data Catalog and Athena, and backtest trading strategies using Amazon SageMaker.
 - Train machine learning models for use in trading strategies.
 - Gain a basic understanding of developing and optimizing trend-following and ML-based trading strategies in Python.
