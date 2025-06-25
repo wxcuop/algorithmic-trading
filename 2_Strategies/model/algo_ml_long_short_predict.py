@@ -1,14 +1,13 @@
 import backtrader as bt  # Import the Backtrader framework for backtesting and trading strategies
-from algo_base import * # Import custom base classes or utilities, likely including StrategyTemplate
-import math  # Import the math module for mathematical operations (e.g., checking for NaN)
-import numpy as np  # Import NumPy for numerical operations, especially array manipulation
-import pandas as pd  # Import Pandas for data manipulation (though not directly used for dataframes in this class)
-import tensorflow as tf  # Import TensorFlow, the deep learning framework
+from algo_base import *
+import math
+import numpy as np
+import pandas as pd
+import tensorflow as tf
 import keras  # Import Keras, a high-level API for building and training neural networks (now part of TensorFlow)
 from keras import backend as K  # Import Keras backend for low-level operations (often used for clearing session)
 from keras.models import load_model  # Import function to load a pre-trained Keras model
 
-# Define the trading strategy class, inheriting from StrategyTemplate (a custom base for Backtrader)
 class MyStrategy(StrategyTemplate):
 
     # This method is called once when the strategy is first initialized by Backtrader

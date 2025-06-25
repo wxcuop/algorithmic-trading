@@ -9,19 +9,23 @@ class MyStrategy(StrategyTemplate):
         self.config["slow_period"]=int(self.config["slow_period"])
         self.config["size"]=int(self.config["size"])
 
+        # Calculate indicators using Backtrader
         self.smaFast = bt.ind.SimpleMovingAverage(period=self.config["fast_period"])
         self.smaSlow = bt.ind.SimpleMovingAverage(period=self.config["slow_period"])
         self.size = self.config["size"]
 
+    # Set cash and commissions
     def init_broker(broker):
         broker.setcash(100000.0)
         broker.setcommission(commission=0.0) 
         
+    # Cerebro is an algo engine
     def add_data(cerebro):
         data = btfeeds.GenericCSVData(
             dataname=MyStrategy.TRAIN_FILE,
             dtformat=('%Y-%m-%d'),
             timeframe=bt.TimeFrame.Days,
+            # These are just indicies of columns in the file
             datetime=0,
             time=-1,
             high=2,
@@ -33,6 +37,7 @@ class MyStrategy(StrategyTemplate):
         )
         cerebro.adddata(data)
 
+    # Processnext data point (in our case a daily bar
     def next(self):  # Processing
         super(MyStrategy, self).next()
         dt=self.datas[0].datetime.datetime(0)
