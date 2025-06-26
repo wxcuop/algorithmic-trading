@@ -165,7 +165,10 @@ By the end of deploying this repo you will:
 7. **Logging:**  
    Execution logs are sent to AWS CloudWatch.
 
-![Architecture Diagram](assets/algo-trading-diagram.drawio.png)
+##  Flow Diagram
+![Trailing Indicators](assets/Trailing_strat.jpg)
+
+![ML Strategy](assets/MK_strat.jpg)                                                                                                                                                                                                                     
 
 
 ---
@@ -240,4 +243,6 @@ Backtest an ML-based strategy with Amazon SageMaker on daily or intraday price d
     - Manages risk with profit targets and stop-losses.
 
 ---
+
+![Overview](assets/algo-trading-diagram.drawio.png)                                                                                                                                                                                                                     
 
