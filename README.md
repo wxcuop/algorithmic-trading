@@ -186,8 +186,8 @@ Thanks to the authors for their ideas and code contributions.
    Create a unique S3 bucket starting with `algotrading-` (e.g., `algotrading-YYYY-MM-DD-XYZ`) for storing external price data.
 
 2. **Deploy Infrastructure:**  
-   Deploy the [CloudFormation template](https://github.com/aws-samples/algorithmic-trading/raw/master/0_Setup/algo-reference.yaml) for SageMaker Notebook, Athena, and Glue Tables.  
-   - Go to [CloudFormation](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=algotrading) and upload the template.
+   Deploy the [CloudFormation template](https://github.com/aws-samples/algorithmic-trading/raw/master/0_Setup/algo-reference-novpc.yaml) for SageMaker Notebook, Athena, and Glue Tables.  
+   - Go to [CloudFormation](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=algotrading) and upload the template. This will create a non-VPC version of the setup, where Interbet access is provided by Sagemaker.
    - Specify your S3 bucket name.
    - Ensure the stack name is `algotrading` and acknowledge IAM changes.
 
