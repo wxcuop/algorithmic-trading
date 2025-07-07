@@ -1,20 +1,16 @@
-import boto3
 import sys
 from awsglue.transforms import *
 from awsglue.utils import getResolvedOptions
-from pyspark.context import SparkContext
 from pyspark.sql.functions import *
-from awsglue.context import GlueContext
-from awsglue.job import Job
 import requests
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 
-args = getResolvedOptions(sys.argv,['BUCKET','ALPHAVANTAGE_API_KEY'])
+args = getResolvedOptions(sys.argv,['BUCKET','ALPHAVANTAGE_API_KEY', "GLUE_DATABASE"])
 BUCKET_NAME = args['BUCKET']
 BUCKET_PREFIX = ""
 ICEBERG_CATALOG_NAME = "glue_catalog"
-ICEBERG_DATABASE_NAME = "algo_data"
+ICEBERG_DATABASE_NAME = args['GLUE_DATABASE']
 ICEBERG_TABLE_NAME = "hist_news_daily_alphavantage"
 WAREHOUSE_PATH = f"s3://{BUCKET_NAME}/{BUCKET_PREFIX}"
 FULL_TABLE_NAME = f"{ICEBERG_CATALOG_NAME}.{ICEBERG_DATABASE_NAME}.{ICEBERG_TABLE_NAME}"
@@ -34,13 +30,7 @@ spark = SparkSession.builder \
     .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") \
     .getOrCreate()
 
-# sc = SparkContext.getOrCreate()
 
-# glueContext = GlueContext(sc)
-# spark = glueContext.spark_session
-# job = Job(spark)
-# 4. Define schema for Spark DataFrame (Good practice for Iceberg)
-# This helps ensure correct data types in Iceberg, especially for `date`.
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, DateType, DoubleType
 schema = StructType([
@@ -48,13 +38,6 @@ schema = StructType([
     StructField("time_published_datetime", DateType(), True),
     StructField("sentiment_score", DoubleType(), True)
 ])
-
-# --- Configuration ---
-API_KEY = 'Z3TBUBW7GS7WSE2W' # Replace with your actual Alpha Vantage API Key
-SYMBOLS = ['INTC', 'AMD', 'NVDA']
-START_DATE = datetime(2021, 1, 1, tzinfo=timezone.utc)
-END_DATE = datetime(2024, 12, 31, tzinfo=timezone.utc)
-INTERVAL_DAYS = 180 # Fetch data in 180-day intervals
 
 # --- Data Fetching and Processing Classes (from your original code) ---
 class NewsSentimentFetcher:

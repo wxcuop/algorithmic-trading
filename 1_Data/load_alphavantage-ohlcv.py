@@ -1,25 +1,24 @@
-import boto3
 import sys
 from awsglue.transforms import *
 from awsglue.utils import getResolvedOptions
-from pyspark.context import SparkContext
 from pyspark.sql.functions import *
-from awsglue.context import GlueContext
-from awsglue.job import Job
+from pyspark.sql import SparkSession
+import requests
+import pandas as pd
+from pyspark.sql.types import StructType, StructField, StringType, DateType, DoubleType
 
 
-args = getResolvedOptions(sys.argv,['Bucket',])
-BUCKET_NAME = args['Bucket']
+args = getResolvedOptions(sys.argv,['BUCKET','ALPHAVANTAGE_API_KEY', "GLUE_DATABASE"])
+BUCKET_NAME = args['BUCKET']
 BUCKET_PREFIX = ""
 ICEBERG_CATALOG_NAME = "glue_catalog"
-ICEBERG_DATABASE_NAME = "algo_data"
+ICEBERG_DATABASE_NAME = args['GLUE_DATABASE']
 ICEBERG_TABLE_NAME = "hist_ohlcv_daily_alphavantage"
 WAREHOUSE_PATH = f"s3://{BUCKET_NAME}/{BUCKET_PREFIX}"
 FULL_TABLE_NAME = f"{ICEBERG_CATALOG_NAME}.{ICEBERG_DATABASE_NAME}.{ICEBERG_TABLE_NAME}"
-API_KEY = 'Z3TBUBW7GS7WSE2W' # Replace with your actual Alpha Vantage API Key
+API_KEY = args['ALPHAVANTAGE_API_KEY']
 SYMBOLS = ['INTC']
 
-from pyspark.sql import SparkSession
 spark = SparkSession.builder \
     .config("spark.sql.warehouse.dir", WAREHOUSE_PATH) \
     .config(f"spark.sql.catalog.{ICEBERG_CATALOG_NAME}", "org.apache.iceberg.spark.SparkCatalog") \
@@ -29,8 +28,6 @@ spark = SparkSession.builder \
     .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") \
     .getOrCreate()
 
-from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, StringType, DateType, DoubleType
 schema = StructType([
     StructField("dt", DateType(), True),   
     StructField("symbol", StringType(), True),
@@ -40,14 +37,6 @@ schema = StructType([
     StructField("close", DoubleType(), True),
     StructField("volume", DoubleType(), True)        
 ])
-
-import sys
-import requests
-from datetime import datetime, timedelta, timezone
-import pandas as pd
-
-
-
 
 # --- Data Fetching and Processing Classes (from your original code) ---
 class OHLCVFetcher:
@@ -124,5 +113,3 @@ except Exception as append_err:
         )
     except Exception as create_err:
         print(f"Failed to create Iceberg table: {create_err}")
-
-

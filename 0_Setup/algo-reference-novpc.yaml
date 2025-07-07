@@ -313,6 +313,7 @@ Resources:
         "--BUCKET":  !Sub algotrading-demo-${AWS::AccountId}
         "--enable-glue-datacatalog": "true"      
         "--ALPHAVANTAGE_API_KEY:" !Ref AlphaVantageApiKey
+        "--GLUE_DATABASE": !Ref GlueDatabase        
 
   GlueETLJobOHLCV:
       Type: AWS::Glue::Job
@@ -333,7 +334,8 @@ Resources:
           "--job-language": "python"
           "--BUCKET":  !Sub algotrading-demo-${AWS::AccountId}
           "--enable-glue-datacatalog": "true"      
-          "--ALPHAVANTAGE_API_KEY:" !Ref AlphaVantageApiKey
+          "--ALPHAVANTAGE_API_KEY": !Ref AlphaVantageApiKey
+          "--GLUE_DATABASE": !Ref GlueDatabase
 
 
   LakeFormationPermissionsOnDatabase:
