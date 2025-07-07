@@ -1,15 +1,3 @@
-%glue_version 4.0
-%worker_type G.1X
-%number_of_workers 3
-%idle_timeout 60  
-
-%%configure
-{
-  "--datalake-formats": "iceberg",
-  "--conf": "spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-}
-
-
 import boto3
 import sys
 from awsglue.transforms import *
@@ -19,13 +7,17 @@ from pyspark.sql.functions import *
 from awsglue.context import GlueContext
 from awsglue.job import Job
 
-BUCKET_NAME = "algotrading-datalake"
+
+args = getResolvedOptions(sys.argv,['Bucket',])
+BUCKET_NAME = args['Bucket']
 BUCKET_PREFIX = ""
 ICEBERG_CATALOG_NAME = "glue_catalog"
 ICEBERG_DATABASE_NAME = "algo_data"
 ICEBERG_TABLE_NAME = "hist_ohlcv_daily_alphavantage"
 WAREHOUSE_PATH = f"s3://{BUCKET_NAME}/{BUCKET_PREFIX}"
 FULL_TABLE_NAME = f"{ICEBERG_CATALOG_NAME}.{ICEBERG_DATABASE_NAME}.{ICEBERG_TABLE_NAME}"
+API_KEY = 'Z3TBUBW7GS7WSE2W' # Replace with your actual Alpha Vantage API Key
+SYMBOLS = ['INTC']
 
 from pyspark.sql import SparkSession
 spark = SparkSession.builder \
@@ -55,22 +47,12 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 
 
-# --- Configuration ---
-API_KEY = '27MOH0ZJ8C2TTVW6' # Replace with your actual Alpha Vantage API Key
-SYMBOLS = ['INTC']
-DAYS_BACK = 5
+
 
 # --- Data Fetching and Processing Classes (from your original code) ---
 class OHLCVFetcher:
-    def __init__(self, api_key, days_back):
+    def __init__(self, api_key):
         self.api_key = api_key
-        self.days_back = days_back
-
-    def get_time_range_str(self):
-        now = datetime.now(timezone.utc)
-        time_to = now.strftime('%Y%m%dT%H%M')
-        time_from = (now - timedelta(days=self.days_back)).strftime('%Y%m%dT%H%M')
-        return time_from, time_to
 
     def fetch_ohlcv_for_symbol(self, symbol):
         time_from, time_to = self.get_time_range_str()
@@ -111,7 +93,7 @@ class OHLCVRecord:
         }
 
 
-fetcher = OHLCVFetcher(API_KEY, DAYS_BACK)
+fetcher = OHLCVFetcher(API_KEY)
 ohlcv_records = []
 
 for symbol in SYMBOLS:

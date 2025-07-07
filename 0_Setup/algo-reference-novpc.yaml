@@ -8,6 +8,13 @@ Parameters:
     Type: String
     Default: algo
 
+  AlphaVantageApiKey:
+    Description: Your Alpha Vantage API key for historical data and news sentiment.
+    Type: String
+    NoEcho: 'true' # This hides the parameter value in console output and history
+    Default: Z3TBUBW7GS7WSE2W
+
+
 Resources:
 
   S3Bucket:
@@ -45,12 +52,6 @@ Resources:
             Resource:
               - !Sub arn:aws:s3:::algotrading-demo-${AWS::AccountId}
               - !Sub arn:aws:s3:::algotrading-demo-${AWS::AccountId}/*
-
-LakeFormationS3Resource:
-  Type: AWS::LakeFormation::Resource
-  Properties:
-    ResourceArn: !Sub arn:aws:s3:::algotrading-demo-${AWS::AccountId}
-    UseServiceLinkedRole: true
 
   SageMakerExecutionRole:
     Type: AWS::IAM::Role
@@ -169,100 +170,198 @@ LakeFormationS3Resource:
         ResultConfiguration:
           OutputLocation: !Sub s3://algotrading-demo-${AWS::AccountId}/results/
 
-  AlgoHistDataDaily:
-    Type: AWS::Athena::NamedQuery
-    Properties:
-      Database: !Ref GlueDatabase
-      QueryString: !Sub select * from algo_data.hist_data_daily limit 10;
-      Name: HistDataDaily
-
-  AlgoHistDataIntraday:
-    Type: AWS::Athena::NamedQuery
-    Properties:
-      Database: !Ref GlueDatabase
-      QueryString: !Sub select * from algo_data.hist_data_intraday limit 10;
-      Name: HistDataIntraday
-
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: algo
       RetentionInDays: 7
 
-  GlueHistNewsDailyAlphavantage:
-    Type: AWS::Glue::Table
+  # GlueHistNewsDailyAlphavantage:
+  #   Type: AWS::Glue::Table
+  #   Properties:
+  #     CatalogId: !Ref AWS::AccountId
+  #     DatabaseName: !Ref GlueDatabase
+  #     TableInput:
+  #       Description: News sentiment scores from Alphavantage
+  #       Name: hist_news_daily_alphavantage
+  #       Parameters:
+  #         classification: iceberg
+  #         table_type: ICEBERG
+  #         write.metadata.metrics.default: none
+  #       StorageDescriptor:
+  #         Location: !Sub s3://algotrading-demo-${AWS::AccountId}/algo_data.db/hist_news_daily_alphavantage
+  #         InputFormat: org.apache.iceberg.mr.hive.HiveIcebergInputFormat
+  #         OutputFormat: org.apache.iceberg.mr.hive.HiveIcebergOutputFormat
+  #         SerdeInfo:
+  #           SerializationLibrary: org.apache.iceberg.mr.hive.HiveIcebergSerDe
+  #           Parameters: {}
+  #       TableType: EXTERNAL_TABLE
+
+
+  # GlueHistOHLCVDailyAlphavantage:
+  #   Type: AWS::Glue::Table
+  #   Properties:
+  #     CatalogId: !Ref AWS::AccountId
+  #     DatabaseName: !Ref GlueDatabase
+  #     TableInput:
+  #       Description: OHLCV Market Data from Alphavantage
+  #       Name: hist_ohlcv_daily_alphavantage
+  #       Parameters:
+  #         classification: iceberg
+  #         table_type: ICEBERG
+  #         write.metadata.metrics.default: none
+  #       StorageDescriptor:
+  #         Location: !Sub s3://algotrading-demo-${AWS::AccountId}/algo_data.db/hist_ohlcv_daily_alphavantage
+  #         InputFormat: org.apache.iceberg.mr.hive.HiveIcebergInputFormat
+  #         OutputFormat: org.apache.iceberg.mr.hive.HiveIcebergOutputFormat
+  #         SerdeInfo:
+  #           SerializationLibrary: org.apache.iceberg.mr.hive.HiveIcebergSerDe
+  #           Parameters: {}
+  #       TableType: EXTERNAL_TABLE
+
+
+  # GlueTablePermissionsHistNewsDaily:
+  #   Type: AWS::LakeFormation::Permissions
+  #   Properties:
+  #     DataLakePrincipal:
+  #       DataLakePrincipalIdentifier: !GetAtt SageMakerExecutionRole.Arn
+  #     Resource:
+  #       TableResource:
+  #         CatalogId: !Ref AWS::AccountId
+  #         DatabaseName: !Ref GlueDatabase
+  #         Name: hist_news_daily_alphavantage
+  #     Permissions:
+  #       - ALL
+  #     PermissionsWithGrantOption:
+  #       - ALL
+
+
+  # GlueTablePermissionsHistOHLCVDaily:
+  #   Type: AWS::LakeFormation::Permissions
+  #   Properties:
+  #     DataLakePrincipal:
+  #       DataLakePrincipalIdentifier: !GetAtt SageMakerExecutionRole.Arn
+  #     Resource:
+  #       TableResource:
+  #         CatalogId: !Ref AWS::AccountId
+  #         DatabaseName: !Ref GlueDatabase
+  #         Name: hist_ohlcv_daily_alphavantage
+  #     Permissions:
+  #       - ALL
+  #     PermissionsWithGrantOption:
+  #       - ALL
+
+
+  GlueETLJobRole:
+    Type: AWS::IAM::Role
     Properties:
-      CatalogId: !Ref AWS::AccountId
-      DatabaseName: !Ref GlueDatabase
-      TableInput:
-        Description: News sentiment scores from Alphavantage
-        Name: hist_news_daily_alphavantage
-        Parameters:
-          classification: iceberg
-          table_type: ICEBERG
-          write.metadata.metrics.default: none
-        StorageDescriptor:
-          Location: !Sub s3://algotrading-demo-${AWS::AccountId}/algo_data.db/hist_news_daily_alphavantage
-          InputFormat: org.apache.iceberg.mr.hive.HiveIcebergInputFormat
-          OutputFormat: org.apache.iceberg.mr.hive.HiveIcebergOutputFormat
-          SerdeInfo:
-            SerializationLibrary: org.apache.iceberg.mr.hive.HiveIcebergSerDe
-            Parameters: {}
-        TableType: EXTERNAL_TABLE
+      RoleName: AlgoTradingDataAdminRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - glue.amazonaws.com
+                - lakeformation.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      Policies:
+        - PolicyName: LakeFormationRegisterResourcePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lakeformation:RegisterResource                 
+                Resource: !Sub arn:aws:lakeformation:${AWS::Region}:${AWS::AccountId}:resource/algotrading-demo-${AWS::AccountId} # Target the specific S3 bucket
 
 
-  GlueHistOHLCVDailyAlphavantage:
-    Type: AWS::Glue::Table
+  GluePassRolePolicy:
+    Type: AWS::IAM::Policy
     Properties:
-      CatalogId: !Ref AWS::AccountId
-      DatabaseName: !Ref GlueDatabase
-      TableInput:
-        Description: OHLCV Market Data from Alphavantage
-        Name: hist_ohlcv_daily_alphavantage
-        Parameters:
-          classification: iceberg
-          table_type: ICEBERG
-          write.metadata.metrics.default: none
-        StorageDescriptor:
-          Location: !Sub s3://algotrading-demo-${AWS::AccountId}/algo_data.db/hist_ohlcv_daily_alphavantage
-          InputFormat: org.apache.iceberg.mr.hive.HiveIcebergInputFormat
-          OutputFormat: org.apache.iceberg.mr.hive.HiveIcebergOutputFormat
-          SerdeInfo:
-            SerializationLibrary: org.apache.iceberg.mr.hive.HiveIcebergSerDe
-            Parameters: {}
-        TableType: EXTERNAL_TABLE
+      PolicyName: AllowPassRoleForGlue
+      Roles:
+        - Ref: GlueETLJobRole  # Or whatever role executes the Glue job
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - iam:PassRole
+            Resource: arn:aws:iam::616431823260:role/AlgoTradingDataAdminRole
+
+  GlueETLJobNews:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: load-alphavantage-news
+      Role: !GetAtt GlueETLJobRole.Arn
+      Command:
+        Name: glueetl
+        ScriptLocation:  !Sub s3://algotrading-demo-${AWS::AccountId}/scripts/dataloaders/load_alphavantage-news.py
+        PythonVersion: "3"
+      GlueVersion: "5.0"
+      MaxRetries: 0
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      Timeout: 10
+      MaxCapacity: 2.0
+      DefaultArguments:
+        "--job-language": "python"
+        "--BUCKET":  !Sub algotrading-demo-${AWS::AccountId}
+        "--enable-glue-datacatalog": "true"      
+        "--ALPHAVANTAGE_API_KEY:" !Ref AlphaVantageApiKey
+
+  GlueETLJobOHLCV:
+      Type: AWS::Glue::Job
+      Properties:
+        Name: load-alphavantage-ohlcv
+        Role: !GetAtt GlueETLJobRole.Arn
+        Command:
+          Name: glueetl
+          ScriptLocation:  !Sub s3://algotrading-demo-${AWS::AccountId}/scripts/dataloaders/load_alphavantage-ohlcv.py
+          PythonVersion: "3"
+        GlueVersion: "5.0"
+        MaxRetries: 0
+        ExecutionProperty:
+          MaxConcurrentRuns: 1
+        Timeout: 10
+        MaxCapacity: 2.0
+        DefaultArguments:
+          "--job-language": "python"
+          "--BUCKET":  !Sub algotrading-demo-${AWS::AccountId}
+          "--enable-glue-datacatalog": "true"      
+          "--ALPHAVANTAGE_API_KEY:" !Ref AlphaVantageApiKey
 
 
-  GlueTablePermissionsHistNewsDaily:
+  LakeFormationPermissionsOnDatabase:
     Type: AWS::LakeFormation::Permissions
     Properties:
       DataLakePrincipal:
-        DataLakePrincipalIdentifier: !GetAtt SageMakerExecutionRole.Arn
-      Resource:
-        TableResource:
-          CatalogId: !Ref AWS::AccountId
-          DatabaseName: !Ref GlueDatabase
-          Name: hist_news_daily_alphavantage
+        DataLakePrincipalIdentifier: !GetAtt GlueETLJobRole.Arn
       Permissions:
-        - ALL
-      PermissionsWithGrantOption:
-        - ALL
+        - CREATE_TABLE
+        - ALTER
+        - DESCRIBE
+      Resource:
+        DatabaseResource:
+          Name: algo_data
 
-
-  GlueTablePermissionsHistOHLCVDaily:
-    Type: AWS::LakeFormation::Permissions
+  DataLakeAdminSettings:
+    Type: AWS::LakeFormation::DataLakeSettings
     Properties:
-      DataLakePrincipal:
-        DataLakePrincipalIdentifier: !GetAtt SageMakerExecutionRole.Arn
-      Resource:
-        TableResource:
-          CatalogId: !Ref AWS::AccountId
-          DatabaseName: !Ref GlueDatabase
-          Name: hist_ohlcv_daily_alphavantage
-      Permissions:
-        - ALL
-      PermissionsWithGrantOption:
-        - ALL
+      Admins:
+        - DataLakePrincipalIdentifier: !GetAtt GlueETLJobRole.Arn
+
+  LakeFormationS3Resource:
+    Type: AWS::LakeFormation::Resource
+    Properties:
+      ResourceArn: !Sub arn:aws:s3:::algotrading-demo-${AWS::AccountId}
+      RoleArn: !GetAtt GlueETLJobRole.Arn
+      UseServiceLinkedRole: false
+
 
 
 Outputs:

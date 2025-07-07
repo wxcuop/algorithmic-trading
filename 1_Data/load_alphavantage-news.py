@@ -1,15 +1,3 @@
-%glue_version 4.0
-%worker_type G.1X
-%number_of_workers 3
-%idle_timeout 60  
-
-%%configure
-{
-  "--datalake-formats": "iceberg",
-  "--conf": "spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-}
-
-
 import boto3
 import sys
 from awsglue.transforms import *
@@ -18,14 +6,23 @@ from pyspark.context import SparkContext
 from pyspark.sql.functions import *
 from awsglue.context import GlueContext
 from awsglue.job import Job
+import requests
+from datetime import datetime, timedelta, timezone
+import pandas as pd
 
-BUCKET_NAME = "algotrading-datalake"
+args = getResolvedOptions(sys.argv,['BUCKET','ALPHAVANTAGE_API_KEY'])
+BUCKET_NAME = args['BUCKET']
 BUCKET_PREFIX = ""
 ICEBERG_CATALOG_NAME = "glue_catalog"
 ICEBERG_DATABASE_NAME = "algo_data"
 ICEBERG_TABLE_NAME = "hist_news_daily_alphavantage"
 WAREHOUSE_PATH = f"s3://{BUCKET_NAME}/{BUCKET_PREFIX}"
 FULL_TABLE_NAME = f"{ICEBERG_CATALOG_NAME}.{ICEBERG_DATABASE_NAME}.{ICEBERG_TABLE_NAME}"
+START_DATE = datetime(2021, 1, 1, tzinfo=timezone.utc)
+END_DATE = datetime(2024, 12, 31, tzinfo=timezone.utc)
+INTERVAL_DAYS = 180 # Fetch data in 180-day intervals
+API_KEY = args['ALPHAVANTAGE_API_KEY']
+SYMBOLS = ['INTC', 'AMD', 'NVDA']
 
 from pyspark.sql import SparkSession
 spark = SparkSession.builder \
@@ -52,44 +49,35 @@ schema = StructType([
     StructField("sentiment_score", DoubleType(), True)
 ])
 
-import sys
-import requests
-from datetime import datetime, timedelta, timezone
-import pandas as pd
-
-
 # --- Configuration ---
 API_KEY = 'Z3TBUBW7GS7WSE2W' # Replace with your actual Alpha Vantage API Key
 SYMBOLS = ['INTC', 'AMD', 'NVDA']
-DAYS_BACK = 5
+START_DATE = datetime(2021, 1, 1, tzinfo=timezone.utc)
+END_DATE = datetime(2024, 12, 31, tzinfo=timezone.utc)
+INTERVAL_DAYS = 180 # Fetch data in 180-day intervals
 
 # --- Data Fetching and Processing Classes (from your original code) ---
 class NewsSentimentFetcher:
-    def __init__(self, api_key, days_back):
+    def __init__(self, api_key):
         self.api_key = api_key
-        self.days_back = days_back
 
-    def get_time_range_str(self):
-        now = datetime.now(timezone.utc)
-        time_to = now.strftime('%Y%m%dT%H%M')
-        time_from = (now - timedelta(days=self.days_back)).strftime('%Y%m%dT%H%M')
-        return time_from, time_to
-
-    def fetch_news_for_symbol(self, symbol):
-        time_from, time_to = self.get_time_range_str()
+    def fetch_news_for_symbol_in_interval(self, symbol, time_from, time_to):
+        """Fetches news for a given symbol within a specified time range."""
+        time_from_str = time_from.strftime('%Y%m%dT%H%M')
+        time_to_str = time_to.strftime('%Y%m%dT%H%M')
 
         url = (
             f'https://www.alphavantage.co/query?function=NEWS_SENTIMENT'
             f'&tickers={symbol}&apikey={self.api_key}'
-            f'&time_from={time_from}&time_to={time_to}&limit=1000'
+            f'&time_from={time_from_str}&time_to={time_to_str}&limit=1000'
         )
- 
+        
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
             return data.get('feed', [])
         else:
-            print(f"Failed to fetch news for {symbol}")
+            print(f"Failed to fetch news for {symbol} from {time_from_str} to {time_to_str}. Status Code: {response.status_code}")
             return []
 
 class NewsRecord:
@@ -138,30 +126,31 @@ class NewsRecord:
 
     def to_dict(self):
         return {
-            # 'date': self.date, # YYYY-MM-DD string - Removed as requested
             'symbol': self.symbol,
-            # 'time_published_str': self.time_published, # Original string - Removed as requested
             'time_published_datetime': self.published_datetime, # Datetime object
             'sentiment_score': self.sentiment_score,
         }
 
-
-fetcher = NewsSentimentFetcher(API_KEY, DAYS_BACK)
+fetcher = NewsSentimentFetcher(API_KEY)
 news_records = []
 
-# 2. Fetch data
-for symbol in SYMBOLS:
-    news = fetcher.fetch_news_for_symbol(symbol)
-    for article in news:
-        record = NewsRecord(symbol=symbol, article=article)
-        if record.sentiment_score is not None:
-            news_records.append(record.to_dict())
+# Iterate through the time intervals
+current_start_date = START_DATE
+while current_start_date <= END_DATE:
+    current_end_date = current_start_date + timedelta(days=INTERVAL_DAYS)
+    if current_end_date > END_DATE:
+        current_end_date = END_DATE
 
-# 3. Create list
-for article in news:
-    record = NewsRecord(symbol=symbol, article=article)
-    if record.sentiment_score is not None:
-        news_records.append(record.to_dict())
+    print(f"Fetching news from {current_start_date.strftime('%Y-%m-%d')} to {current_end_date.strftime('%Y-%m-%d')}")
+
+    for symbol in SYMBOLS:
+        news = fetcher.fetch_news_for_symbol_in_interval(symbol, current_start_date, current_end_date)
+        for article in news:
+            record = NewsRecord(symbol=symbol, article=article)
+            if record.sentiment_score is not None:
+                news_records.append(record.to_dict())
+    
+    current_start_date = current_end_date + timedelta(days=1) # Move to the next day to avoid overlaps
 
 # 4. Create Pandas DataFrame
 pandas_df = pd.DataFrame(news_records)
@@ -173,6 +162,7 @@ try:
     # Try to append first
     spark_df.writeTo(FULL_TABLE_NAME).append()
 except Exception as append_err:
+    print(f"Append failed, attempting to create table: {append_err}")
     try:
         (
             spark_df.writeTo(FULL_TABLE_NAME)
@@ -181,7 +171,6 @@ except Exception as append_err:
             .tableProperty("format-version", "2")  # Optional Iceberg version
             .create()
         )
+        print(f"Table {FULL_TABLE_NAME} created successfully.")
     except Exception as create_err:
         print(f"Failed to create Iceberg table: {create_err}")
-
-
