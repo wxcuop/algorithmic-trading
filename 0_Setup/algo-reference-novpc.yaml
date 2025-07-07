@@ -1,29 +1,31 @@
+AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   This template deploys the algorithmic trading reference architecture
-  
+
 Parameters:
   EnvironmentName:
     Description: An environment name that will be prefixed to resource names
     Type: String
     Default: algo
 
-  S3Bucket:
-    Description: Please specify your S3 bucket
-    Type: String
-    
 Resources:
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub algotrading-demo-${AWS::AccountId}
 
   ECR:
     Type: AWS::ECR::Repository
-    Properties: 
+    Properties:
       RepositoryName: !Sub ${EnvironmentName}_ecr
-    
+
   AlgorithmicTradingInstance:
     Type: AWS::SageMaker::NotebookInstance
     Properties:
       InstanceType: ml.t3.large
       DefaultCodeRepository: https://bitbucket.org/imalinovsky/algorithmic-trading
-      RoleArn: !GetAtt 'SageMakerExecutionRole.Arn'
+      RoleArn: !GetAtt SageMakerExecutionRole.Arn
       PlatformIdentifier: notebook-al2-v3
 
   S3Policy:
@@ -41,10 +43,15 @@ Resources:
               - s3:DeleteObject
               - s3:ListBucket
             Resource:
-              - !Sub
-                - arn:aws:s3:::${S3Bucket}/*
-                - S3Bucket: !Ref 'S3Bucket'
-                
+              - !Sub arn:aws:s3:::algotrading-demo-${AWS::AccountId}
+              - !Sub arn:aws:s3:::algotrading-demo-${AWS::AccountId}/*
+
+LakeFormationS3Resource:
+  Type: AWS::LakeFormation::Resource
+  Properties:
+    ResourceArn: !Sub arn:aws:s3:::algotrading-demo-${AWS::AccountId}
+    UseServiceLinkedRole: true
+
   SageMakerExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -62,12 +69,11 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonSageMakerFullAccess
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
         - arn:aws:iam::aws:policy/AmazonAthenaFullAccess
-        - arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess 
+        - arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess
         - arn:aws:iam::aws:policy/AmazonECS_FullAccess
         - arn:aws:iam::aws:policy/AmazonKinesisReadOnlyAccess
-        - !Ref 'S3Policy'
+        - !Ref S3Policy
 
-  
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -83,7 +89,7 @@ Resources:
       Path: /
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-              
+
   AlgoExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -99,24 +105,24 @@ Resources:
       Path: /
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-  
+
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
-        ClusterName: !Ref EnvironmentName
-        
+      ClusterName: !Ref EnvironmentName
+
   GlueDatabase:
     Type: AWS::Glue::Database
     Properties:
-        CatalogId: !Ref 'AWS::AccountId'
-        DatabaseInput:
-          Name: algo_data
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: algo_data
 
   GlueHistDataDaily:
     Type: AWS::Glue::Table
     Properties:
-      CatalogId: !Ref 'AWS::AccountId'
-      DatabaseName: !Ref 'GlueDatabase'
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref GlueDatabase
       TableInput:
         Description: Daily Price Data
         Name: hist_data_daily
@@ -141,11 +147,7 @@ Resources:
               Type: double
           Compressed: false
           InputFormat: org.apache.hadoop.mapred.TextInputFormat
-          Location: !Join
-            - ''
-            - - s3://
-              - !Ref 'S3Bucket'
-              - /hist_data_daily
+          Location: !Sub s3://algotrading-demo-${AWS::AccountId}/hist_data_daily
           OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
           SerdeInfo:
             SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
@@ -155,49 +157,6 @@ Resources:
           StoredAsSubDirectories: false
         TableType: EXTERNAL_TABLE
 
-  GlueHistDataIntraday:
-    Type: AWS::Glue::Table
-    Properties:
-      CatalogId: !Ref 'AWS::AccountId'
-      DatabaseName: !Ref 'GlueDatabase'
-      TableInput:
-        Description: Intraday Price Data
-        Name: hist_data_intraday
-        Parameters:
-          classification: csv
-          has_encrypted_data: false
-        StorageDescriptor:
-          Columns:
-            - Name: dt
-              Type: string
-            - Name: sym
-              Type: string
-            - Name: open
-              Type: double
-            - Name: high
-              Type: double
-            - Name: low
-              Type: double
-            - Name: close
-              Type: double
-            - Name: vol
-              Type: double
-          Compressed: false
-          InputFormat: org.apache.hadoop.mapred.TextInputFormat
-          Location: !Join
-            - ''
-            - - s3://
-              - !Ref 'S3Bucket'
-              - /hist_data_intraday
-          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
-          SerdeInfo:
-            SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-            Parameters:
-              field.delim: ','
-              skip.header.line.count: '1'
-          StoredAsSubDirectories: false
-        TableType: EXTERNAL_TABLE
-  
   AthenaWorkgroup:
     Type: AWS::Athena::WorkGroup
     Properties:
@@ -208,106 +167,105 @@ Resources:
       WorkGroupConfiguration:
         RequesterPaysEnabled: true
         ResultConfiguration:
-          OutputLocation: !Join
-            - ''
-            - - s3://
-              - !Ref 'S3Bucket'
-              - /results/
+          OutputLocation: !Sub s3://algotrading-demo-${AWS::AccountId}/results/
 
   AlgoHistDataDaily:
     Type: AWS::Athena::NamedQuery
     Properties:
-      Database: !Ref 'GlueDatabase'
-      QueryString: !Join
-        - ''
-        - - select * from algo_data.
-          - !Ref 'GlueHistDataDaily'
-          - ' limit 10;'
+      Database: !Ref GlueDatabase
+      QueryString: !Sub select * from algo_data.hist_data_daily limit 10;
       Name: HistDataDaily
 
   AlgoHistDataIntraday:
     Type: AWS::Athena::NamedQuery
     Properties:
-      Database: !Ref 'GlueDatabase'
-      QueryString: !Join
-        - ''
-        - - select * from algo_data.
-          - !Ref 'GlueHistDataIntraday'
-          - ' limit 10;'
+      Database: !Ref GlueDatabase
+      QueryString: !Sub select * from algo_data.hist_data_intraday limit 10;
       Name: HistDataIntraday
 
-  GlueTableFeedDB:
-    Type: AWS::Glue::Table
-    Properties:
-      CatalogId: !Ref 'AWS::AccountId'
-      DatabaseName: !Ref 'GlueDatabase'
-      TableInput:
-        Description: Deutsche Boerse Xetra PDS
-        Name: market_feed_deutsche_boerse
-        Parameters:
-          classification: csv
-          has_encrypted_data: false
-        StorageDescriptor:
-          Columns:
-            - Name: isin
-              Type: string
-            - Name: mnemonic
-              Type: string
-            - Name: securitydesc
-              Type: string
-            - Name: securitytype
-              Type: string
-            - Name: currency
-              Type: string
-            - Name: securityid
-              Type: bigint
-            - Name: date
-              Type: string
-            - Name: time
-              Type: string
-            - Name: startprice
-              Type: double
-            - Name: maxprice
-              Type: double
-            - Name: minprice
-              Type: double
-            - Name: endprice
-              Type: double
-            - Name: tradedvolume
-              Type: bigint
-            - Name: numberoftrades
-              Type: bigint
-          Compressed: false
-          InputFormat: org.apache.hadoop.mapred.TextInputFormat
-          Location: !Join
-            - ''
-            - - s3://
-              - !Ref 'S3Bucket'
-              - /feed/deutsche-boerse-xetra-pds
-          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
-          SerdeInfo:
-            SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-            Parameters:
-              field.delim: ','
-              skip.header.line.count: '1'
-          StoredAsSubDirectories: false
-        PartitionKeys:
-            - Name: year
-              Type: bigint
-            - Name: month
-              Type: bigint
-            - Name: day
-              Type: bigint       
-        TableType: EXTERNAL_TABLE
-  
   LogGroup:
     Type: AWS::Logs::LogGroup
-    Properties: 
+    Properties:
       LogGroupName: algo
       RetentionInDays: 7
 
-Outputs:
+  GlueHistNewsDailyAlphavantage:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref GlueDatabase
+      TableInput:
+        Description: News sentiment scores from Alphavantage
+        Name: hist_news_daily_alphavantage
+        Parameters:
+          classification: iceberg
+          table_type: ICEBERG
+          write.metadata.metrics.default: none
+        StorageDescriptor:
+          Location: !Sub s3://algotrading-demo-${AWS::AccountId}/algo_data.db/hist_news_daily_alphavantage
+          InputFormat: org.apache.iceberg.mr.hive.HiveIcebergInputFormat
+          OutputFormat: org.apache.iceberg.mr.hive.HiveIcebergOutputFormat
+          SerdeInfo:
+            SerializationLibrary: org.apache.iceberg.mr.hive.HiveIcebergSerDe
+            Parameters: {}
+        TableType: EXTERNAL_TABLE
 
+
+  GlueHistOHLCVDailyAlphavantage:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref GlueDatabase
+      TableInput:
+        Description: OHLCV Market Data from Alphavantage
+        Name: hist_ohlcv_daily_alphavantage
+        Parameters:
+          classification: iceberg
+          table_type: ICEBERG
+          write.metadata.metrics.default: none
+        StorageDescriptor:
+          Location: !Sub s3://algotrading-demo-${AWS::AccountId}/algo_data.db/hist_ohlcv_daily_alphavantage
+          InputFormat: org.apache.iceberg.mr.hive.HiveIcebergInputFormat
+          OutputFormat: org.apache.iceberg.mr.hive.HiveIcebergOutputFormat
+          SerdeInfo:
+            SerializationLibrary: org.apache.iceberg.mr.hive.HiveIcebergSerDe
+            Parameters: {}
+        TableType: EXTERNAL_TABLE
+
+
+  GlueTablePermissionsHistNewsDaily:
+    Type: AWS::LakeFormation::Permissions
+    Properties:
+      DataLakePrincipal:
+        DataLakePrincipalIdentifier: !GetAtt SageMakerExecutionRole.Arn
+      Resource:
+        TableResource:
+          CatalogId: !Ref AWS::AccountId
+          DatabaseName: !Ref GlueDatabase
+          Name: hist_news_daily_alphavantage
+      Permissions:
+        - ALL
+      PermissionsWithGrantOption:
+        - ALL
+
+
+  GlueTablePermissionsHistOHLCVDaily:
+    Type: AWS::LakeFormation::Permissions
+    Properties:
+      DataLakePrincipal:
+        DataLakePrincipalIdentifier: !GetAtt SageMakerExecutionRole.Arn
+      Resource:
+        TableResource:
+          CatalogId: !Ref AWS::AccountId
+          DatabaseName: !Ref GlueDatabase
+          Name: hist_ohlcv_daily_alphavantage
+      Permissions:
+        - ALL
+      PermissionsWithGrantOption:
+        - ALL
+
+
+Outputs:
   ECR:
     Description: A reference to ECR
     Value: !Ref ECR
@@ -320,7 +278,6 @@ Outputs:
     Export:
       Name: AlgorithmicTrading-S3Bucket
 
-
   ECSTaskExecutionRole:
     Description: ECSTaskExecutionRole
     Value: !Ref ECSTaskExecutionRole
@@ -329,7 +286,7 @@ Outputs:
 
   AlgoExecutionRole:
     Description: AlgoExecutionRole ARN
-    Value: !GetAtt 'AlgoExecutionRole.Arn'
+    Value: !GetAtt AlgoExecutionRole.Arn
     Export:
       Name: AlgorithmicTrading-AlgoExecutionRole-ARN
 
