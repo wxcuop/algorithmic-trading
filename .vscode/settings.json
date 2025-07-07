@@ -1,0 +1,5 @@
+{
+    "yaml.schemas": {
+        "https://raw.githubusercontent.com/awslabs/goformation/master/schema/cloudformation.schema.json": "file:///home/ilyam/source/algorithmic-trading/0_Setup/iceberg.create.yaml"
+    }
+}
