@@ -1,0 +1,53 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "094e97da-6f21-424b-87d6-eecf8b478062",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import glob\n",
+    "\n",
+    "# get S3 bucket\n",
+    "s3bucket=!(aws s3 ls | grep algotrading- | awk  '{print $3}')\n",
+    "s3bucket=s3bucket[0]\n",
+    "\n",
+    "local_notebook_path = \"./\"  # Path to your notebook\n",
+    "s3prefix = \"scripts/dataloaders\"\n",
+    "file_location = local_notebook_path\n",
+    "local_pattern = \"./load_*.py\"\n",
+    "\n",
+    "# List matching files\n",
+    "matching_files = glob.glob(local_pattern)\n",
+    "\n",
+    "# Upload each file\n",
+    "for file in matching_files:\n",
+    "    s3_uri = f\"s3://{s3bucket}/{s3prefix}/{os.path.basename(file)}\"\n",
+    "    os.system(f\"aws s3 cp {file} {s3_uri}\")"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "conda_python3",
+   "language": "python",
+   "name": "conda_python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.10.18"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
