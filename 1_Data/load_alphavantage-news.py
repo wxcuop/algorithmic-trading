@@ -5,8 +5,10 @@ from pyspark.sql.functions import *
 import requests
 from datetime import datetime, timedelta, timezone
 import pandas as pd
+from pyspark.sql import SparkSession
+from pyspark.sql.types import StructType, StructField, StringType, DateType, DoubleType
 
-args = getResolvedOptions(sys.argv,['BUCKET','ALPHAVANTAGE_API_KEY', "GLUE_DATABASE"])
+args = getResolvedOptions(sys.argv,['BUCKET','ALPHAVANTAGE_API_KEY', 'GLUE_DATABASE', 'EXECUTION_ROLE'])
 BUCKET_NAME = args['BUCKET']
 BUCKET_PREFIX = ""
 ICEBERG_CATALOG_NAME = "glue_catalog"
@@ -14,13 +16,13 @@ ICEBERG_DATABASE_NAME = args['GLUE_DATABASE']
 ICEBERG_TABLE_NAME = "hist_news_daily_alphavantage"
 WAREHOUSE_PATH = f"s3://{BUCKET_NAME}/{BUCKET_PREFIX}"
 FULL_TABLE_NAME = f"{ICEBERG_CATALOG_NAME}.{ICEBERG_DATABASE_NAME}.{ICEBERG_TABLE_NAME}"
-START_DATE = datetime(2021, 1, 1, tzinfo=timezone.utc)
+START_DATE = datetime(2022, 1, 1, tzinfo=timezone.utc)
 END_DATE = datetime(2024, 12, 31, tzinfo=timezone.utc)
-INTERVAL_DAYS = 180 # Fetch data in 180-day intervals
+INTERVAL_DAYS = 90 # Fetch data in 90-day intervals
 API_KEY = args['ALPHAVANTAGE_API_KEY']
+EXECUTION_ROLE = args['EXECUTION_ROLE']
 SYMBOLS = ['INTC', 'AMD', 'NVDA']
 
-from pyspark.sql import SparkSession
 spark = SparkSession.builder \
     .config("spark.sql.warehouse.dir", WAREHOUSE_PATH) \
     .config(f"spark.sql.catalog.{ICEBERG_CATALOG_NAME}", "org.apache.iceberg.spark.SparkCatalog") \
@@ -31,8 +33,6 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 
-from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, StringType, DateType, DoubleType
 schema = StructType([
     StructField("symbol", StringType(), True),
     StructField("time_published_datetime", DateType(), True),
@@ -150,8 +150,8 @@ except Exception as append_err:
         (
             spark_df.writeTo(FULL_TABLE_NAME)
             .using("iceberg")
-            .partitionedBy("time_published_datetime")  # Partitioning
             .tableProperty("format-version", "2")  # Optional Iceberg version
+            .partitionedBy("days(time_published_datetime)")             # <-- Partition by day
             .create()
         )
         print(f"Table {FULL_TABLE_NAME} created successfully.")

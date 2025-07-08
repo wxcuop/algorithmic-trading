@@ -107,8 +107,8 @@ except Exception as append_err:
         (
             spark_df.writeTo(FULL_TABLE_NAME)
             .using("iceberg")
-            .partitionedBy("dt")  # Partitioning
             .tableProperty("format-version", "2")  # Optional Iceberg version
+            .partitionedBy("days(dt)")             # <-- Partition by day
             .create()
         )
     except Exception as create_err:

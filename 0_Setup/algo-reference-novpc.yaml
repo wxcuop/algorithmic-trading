@@ -176,82 +176,6 @@ Resources:
       LogGroupName: algo
       RetentionInDays: 7
 
-  # GlueHistNewsDailyAlphavantage:
-  #   Type: AWS::Glue::Table
-  #   Properties:
-  #     CatalogId: !Ref AWS::AccountId
-  #     DatabaseName: !Ref GlueDatabase
-  #     TableInput:
-  #       Description: News sentiment scores from Alphavantage
-  #       Name: hist_news_daily_alphavantage
-  #       Parameters:
-  #         classification: iceberg
-  #         table_type: ICEBERG
-  #         write.metadata.metrics.default: none
-  #       StorageDescriptor:
-  #         Location: !Sub s3://algotrading-demo-${AWS::AccountId}/algo_data.db/hist_news_daily_alphavantage
-  #         InputFormat: org.apache.iceberg.mr.hive.HiveIcebergInputFormat
-  #         OutputFormat: org.apache.iceberg.mr.hive.HiveIcebergOutputFormat
-  #         SerdeInfo:
-  #           SerializationLibrary: org.apache.iceberg.mr.hive.HiveIcebergSerDe
-  #           Parameters: {}
-  #       TableType: EXTERNAL_TABLE
-
-
-  # GlueHistOHLCVDailyAlphavantage:
-  #   Type: AWS::Glue::Table
-  #   Properties:
-  #     CatalogId: !Ref AWS::AccountId
-  #     DatabaseName: !Ref GlueDatabase
-  #     TableInput:
-  #       Description: OHLCV Market Data from Alphavantage
-  #       Name: hist_ohlcv_daily_alphavantage
-  #       Parameters:
-  #         classification: iceberg
-  #         table_type: ICEBERG
-  #         write.metadata.metrics.default: none
-  #       StorageDescriptor:
-  #         Location: !Sub s3://algotrading-demo-${AWS::AccountId}/algo_data.db/hist_ohlcv_daily_alphavantage
-  #         InputFormat: org.apache.iceberg.mr.hive.HiveIcebergInputFormat
-  #         OutputFormat: org.apache.iceberg.mr.hive.HiveIcebergOutputFormat
-  #         SerdeInfo:
-  #           SerializationLibrary: org.apache.iceberg.mr.hive.HiveIcebergSerDe
-  #           Parameters: {}
-  #       TableType: EXTERNAL_TABLE
-
-
-  # GlueTablePermissionsHistNewsDaily:
-  #   Type: AWS::LakeFormation::Permissions
-  #   Properties:
-  #     DataLakePrincipal:
-  #       DataLakePrincipalIdentifier: !GetAtt SageMakerExecutionRole.Arn
-  #     Resource:
-  #       TableResource:
-  #         CatalogId: !Ref AWS::AccountId
-  #         DatabaseName: !Ref GlueDatabase
-  #         Name: hist_news_daily_alphavantage
-  #     Permissions:
-  #       - ALL
-  #     PermissionsWithGrantOption:
-  #       - ALL
-
-
-  # GlueTablePermissionsHistOHLCVDaily:
-  #   Type: AWS::LakeFormation::Permissions
-  #   Properties:
-  #     DataLakePrincipal:
-  #       DataLakePrincipalIdentifier: !GetAtt SageMakerExecutionRole.Arn
-  #     Resource:
-  #       TableResource:
-  #         CatalogId: !Ref AWS::AccountId
-  #         DatabaseName: !Ref GlueDatabase
-  #         Name: hist_ohlcv_daily_alphavantage
-  #     Permissions:
-  #       - ALL
-  #     PermissionsWithGrantOption:
-  #       - ALL
-
-
   GlueETLJobRole:
     Type: AWS::IAM::Role
     Properties:
@@ -312,8 +236,9 @@ Resources:
         "--job-language": "python"
         "--BUCKET":  !Sub algotrading-demo-${AWS::AccountId}
         "--enable-glue-datacatalog": "true"      
-        "--ALPHAVANTAGE_API_KEY:" !Ref AlphaVantageApiKey
+        "--ALPHAVANTAGE_API_KEY": !Ref AlphaVantageApiKey
         "--GLUE_DATABASE": !Ref GlueDatabase        
+        "--EXECUTION_ROLE": !GetAtt SageMakerExecutionRole.Arn        
 
   GlueETLJobOHLCV:
       Type: AWS::Glue::Job
@@ -336,6 +261,7 @@ Resources:
           "--enable-glue-datacatalog": "true"      
           "--ALPHAVANTAGE_API_KEY": !Ref AlphaVantageApiKey
           "--GLUE_DATABASE": !Ref GlueDatabase
+          "--EXECUTION_ROLE": !GetAtt SageMakerExecutionRole.Arn
 
 
   LakeFormationPermissionsOnDatabase:
@@ -344,12 +270,26 @@ Resources:
       DataLakePrincipal:
         DataLakePrincipalIdentifier: !GetAtt GlueETLJobRole.Arn
       Permissions:
-        - CREATE_TABLE
-        - ALTER
-        - DESCRIBE
+        - ALL
+      PermissionsWithGrantOption:
+        - ALL
       Resource:
         DatabaseResource:
           Name: algo_data
+
+      
+
+  DatabaseTableSelectPermissions: # Renamed for clarity - reflects permissions on tables within the database
+    Type: AWS::LakeFormation::Permissions
+    Properties:
+      DataLakePrincipal:
+        DataLakePrincipalIdentifier: !GetAtt SageMakerExecutionRole.Arn # Correct way to reference the role's ARN
+      Resource:
+        TableResource: # <--- This is the correct structure for table permissions
+          DatabaseName: !Ref GlueDatabase # Reference the database name here
+          TableWildcard: {} # This grants permissions to all tables, current and future
+      Permissions:
+        - SELECT
 
   DataLakeAdminSettings:
     Type: AWS::LakeFormation::DataLakeSettings
