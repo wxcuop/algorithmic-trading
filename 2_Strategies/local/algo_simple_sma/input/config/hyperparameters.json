@@ -1,1 +1,1 @@
-{"fast_period": "50", "slow_period": "200", "size": "100", "algo_name": "algo_simple_sma", "user": "user", "account": "616431823260", "region": "us-east-1"}
+{"fast_period": "5", "slow_period": "50", "size": "100", "algo_name": "algo_simple_sma", "user": "user", "account": "616431823260", "region": "us-east-1"}
