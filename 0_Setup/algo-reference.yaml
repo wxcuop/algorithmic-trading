@@ -119,45 +119,6 @@ Resources:
       DatabaseInput:
         Name: algo_data
 
-  GlueHistDataDaily:
-    Type: AWS::Glue::Table
-    Properties:
-      CatalogId: !Ref AWS::AccountId
-      DatabaseName: !Ref GlueDatabase
-      TableInput:
-        Description: Daily Price Data
-        Name: hist_data_daily
-        Parameters:
-          classification: csv
-          has_encrypted_data: false
-        StorageDescriptor:
-          Columns:
-            - Name: dt
-              Type: string
-            - Name: sym
-              Type: string
-            - Name: open
-              Type: double
-            - Name: high
-              Type: double
-            - Name: low
-              Type: double
-            - Name: close
-              Type: double
-            - Name: vol
-              Type: double
-          Compressed: false
-          InputFormat: org.apache.hadoop.mapred.TextInputFormat
-          Location: !Sub s3://algotrading-demo-${AWS::AccountId}/hist_data_daily
-          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
-          SerdeInfo:
-            SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-            Parameters:
-              field.delim: ','
-              skip.header.line.count: '1'
-          StoredAsSubDirectories: false
-        TableType: EXTERNAL_TABLE
-
   AthenaWorkgroup:
     Type: AWS::Athena::WorkGroup
     Properties:
@@ -208,7 +169,7 @@ Resources:
     Properties:
       PolicyName: AllowPassRoleForGlue
       Roles:
-        - Ref: GlueETLJobRole  # Or whatever role executes the Glue job
+        - Ref: GlueETLJobRole
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -278,15 +239,13 @@ Resources:
           Name: algo_data
 
       
-
-  DatabaseTableSelectPermissions: # Renamed for clarity - reflects permissions on tables within the database
-    Type: AWS::LakeFormation::Permissions
+  DatabaseTableSelectPermissions: 
     Properties:
       DataLakePrincipal:
-        DataLakePrincipalIdentifier: !GetAtt SageMakerExecutionRole.Arn # Correct way to reference the role's ARN
+        DataLakePrincipalIdentifier: !GetAtt SageMakerExecutionRole.Arn
       Resource:
-        TableResource: # <--- This is the correct structure for table permissions
-          DatabaseName: !Ref GlueDatabase # Reference the database name here
+        TableResource:
+          DatabaseName: !Ref GlueDatabase
           TableWildcard: {} # This grants permissions to all tables, current and future
       Permissions:
         - SELECT

@@ -17,7 +17,7 @@ ICEBERG_TABLE_NAME = "hist_news_daily_alphavantage"
 WAREHOUSE_PATH = f"s3://{BUCKET_NAME}/{BUCKET_PREFIX}"
 FULL_TABLE_NAME = f"{ICEBERG_CATALOG_NAME}.{ICEBERG_DATABASE_NAME}.{ICEBERG_TABLE_NAME}"
 START_DATE = datetime(2022, 1, 1, tzinfo=timezone.utc)
-END_DATE = datetime(2024, 12, 31, tzinfo=timezone.utc)
+END_DATE = datetime(2025, 6, 30, tzinfo=timezone.utc)
 INTERVAL_DAYS = 90 # Fetch data in 90-day intervals
 API_KEY = args['ALPHAVANTAGE_API_KEY']
 EXECUTION_ROLE = args['EXECUTION_ROLE']
