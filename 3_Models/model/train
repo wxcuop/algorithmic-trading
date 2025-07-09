@@ -82,7 +82,7 @@ def generate_model(dataX, dataY, b):
     # Train the model using the provided training data (dataX, dataY)
     model.fit(dataX, dataY, epochs=100, batch_size=1)
     # Evaluate the model's performance on the training data.  
-    scores = model.evaluate(dataX, dataY, verbose=0)
+    scores = model.evaluate(dataX, dataY, verbose=1)
     print("Training Data %s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
     return model
         

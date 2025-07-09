@@ -44,7 +44,7 @@ for a in range(0, repeatCount):
 for a in range(0, repeatCount):
     hData.append("roc" + str((a + 2) * repeatStep))
 
-# Add column names for the Rate of Change (ROC) indicators.
+# Add column names for the Sentiment indicators.
 # Periods are (a+2)*repeatStep, e.g., for repeatStep=1, periods are 2, 3, 4, ..., 16.
 for a in range(0, repeatCount):
     hData.append("sentiment_score" + str((a + 2) * repeatStep))
@@ -78,7 +78,7 @@ for a in range(0, repeatCount):
 sentiment_score = [] 
 
 for a in range(0, repeatCount):
-    # Calculate SMA for periods (a+1)*repeatStep+1 (e.g., 2, 3, ..., 16 if repeatStep=1)
+    # Calculate Sentiment SMA for periods (a+1)*repeatStep+1 (e.g., 2, 3, ..., 16 if repeatStep=1)
     sentiment_score.append(SMA(inputs['sentiment_score'], timeperiod=(a + 1) * repeatStep + 1))
 
 # --- Prepare for Iteration and Counters ---
