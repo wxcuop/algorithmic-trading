@@ -3,7 +3,6 @@
 This proof-of-concept (POC) demonstrates a machine learning-based quantitative research environment for algorithmic trading. It shows how to load and store financial data on AWS (market data and consumer sentiment data from Alphavantage), and how to build and backtest algorithmic trading strategies with SageMaker AI using technical indicators and advanced machine learning models. Data is stored using Iceberg and Data Lake. Training and inference can be performed both locally and on the cluster.
 This setup is entirely serverless, everything is created on-the-fly as a AWS service from a declarative source, and shut down upon completion of the workload
 
-> **Note:**  
 > The goal is to demonstrate the MLOps pipeline. Several reasonably realistic algorithms are included for demonstration purposes. This is a demo, not a production trading algorithm. Training is performed on synthetic data. The objective is to showcase the quant platform setup, not to demonstrate real alpha. Please ignore the negative Sharpe ratio and PnL; the focus is on demonstrating the platform, not on trading performance.
 
 ---
@@ -118,8 +117,11 @@ All strategies generate a typical backtesting chart and provide raw trade-by-tra
    Data is downloaded using a Glue ETL process from Alphavantage (both news and market data). It is then stored in Iceberg tables, and data governance is managed through Data Lake. Spark is used to create the Iceberg tables. Athena is used to access the data from the backtesting engine.  
    Both options are included to demonstrate the platform's capabilities.
 3. **Strategy Backtesting:**  
+
    - Non-ML strategies (SMA, Breakout) use the data directly.
+
    - ML-based strategies (see `2_Strategies/Strategy_ML_Forecast.ipynb`) involve an intermediate model training step (`3_Models/Train_Model_Forecast.ipynb`). Similarly for `Strategy_ML_Forecast_with_Sentiment`.
+
 4. **Parameter Optimization:**  
    Each strategy has a hyperparameter file for running various parameter combinations during backtesting.
 5. **Containerization:**  
@@ -142,8 +144,11 @@ All strategies generate a typical backtesting chart and provide raw trade-by-tra
 
 1. [Get an Alphavantage API key](https://www.alphavantage.co/support/#api-key) (free and easy).
 2. Deploy the [CloudFormation template](https://bitbucket.org/imalinovsky/algorithmic-trading/src/main/0_Setup/algo-reference.yaml) for SageMaker Notebook, Athena, and Glue Iceberg Tables.
+
    - Go to [CloudFormation](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=algotrading) and upload the template. This will create a non-VPC version of the setup, where Internet access is provided by SageMaker.
+
    - Specify your S3 bucket name.
+
    - Ensure the stack name is `algotrading` and acknowledge IAM changes.
 
 ---
@@ -168,9 +173,13 @@ Run each to train the corresponding model. This will produce `.h5` files with tr
 ### Step 3: Backtesting
 
 Backtest any or all of the strategies in [`2_Strategies`](https://bitbucket.org/imalinovsky/algorithmic-trading/src/main/2_Strategies/):
+
 - [Breakout](https://bitbucket.org/imalinovsky/algorithmic-trading/src/main/2_Strategies/Strategy_Breakout.ipynb)
+
 - [SMA](https://bitbucket.org/imalinovsky/algorithmic-trading/src/main/2_Strategies/Strategy_SMA.ipynb)
+
 - [Short-Long Forecast](https://bitbucket.org/imalinovsky/algorithmic-trading/src/main/2_Strategies/Strategy_ML_Forecast.ipynb)
+
 - [Short-Long Forecast with Sentiment](https://bitbucket.org/imalinovsky/algorithmic-trading/src/main/2_Strategies/Strategy_ML_Forecast_with_Sentiment.ipynb)
 
 ---

@@ -6,6 +6,7 @@ from pyspark.sql import SparkSession
 import requests
 import pandas as pd
 from pyspark.sql.types import StructType, StructField, StringType, DateType, DoubleType
+import logging
 
 
 args = getResolvedOptions(sys.argv,['BUCKET','ALPHAVANTAGE_API_KEY', "GLUE_DATABASE"])
@@ -44,19 +45,20 @@ class OHLCVFetcher:
         self.api_key = api_key
 
     def fetch_ohlcv_for_symbol(self, symbol):
-        time_from, time_to = self.get_time_range_str()
+        logger.info(f"Fetching OHLCV for symbol: {symbol}")
+        time_from, time_to = self.get_time_range_str() if hasattr(self, 'get_time_range_str') else (None, None)
         url = (
             f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY'
             f'&symbol={symbol}&apikey={self.api_key}'
             f'&outputsize=full'
-
         )
         response = requests.get(url)
         if response.status_code == 200:
+            logger.info(f"Successfully fetched data for {symbol}")
             data = response.json()
             return data.get('Time Series (Daily)', [])
         else:
-            print(f"Failed to fetch OHLCV for {symbol}")
+            logger.error(f"Failed to fetch OHLCV for {symbol}, status code: {response.status_code}")
             return []
 
 class OHLCVRecord:
@@ -72,7 +74,7 @@ class OHLCVRecord:
 
     def to_dict(self):
         return {
-            'dt': self.date, # YYYY-MM-DD string - Removed as requested
+            'dt': self.date, 
             'symbol': self.symbol,
             'open': float(self.open),
             'high': float(self.high), # Datetime object
@@ -86,30 +88,37 @@ fetcher = OHLCVFetcher(API_KEY)
 ohlcv_records = []
 
 for symbol in SYMBOLS:
+    logger.info(f"Processing symbol: {symbol}")
     ohlcv = fetcher.fetch_ohlcv_for_symbol(symbol)
-
-for date, values in ohlcv.items():
-    ohlcv_tick = OHLCVRecord(date=date, values = values, symbol = symbol)
-    ohlcv_records.append(ohlcv_tick.to_dict())
+    for date, values in ohlcv.items():
+        ohlcv_tick = OHLCVRecord(date=date, values = values, symbol = symbol)
+        ohlcv_records.append(ohlcv_tick.to_dict())
+logger.info(f"Fetched and processed OHLCV records for {len(SYMBOLS)} symbol(s). Total records: {len(ohlcv_records)}")
 
 # 4. Create Pandas DataFrame
+logger.info("Creating Pandas DataFrame from records.")
 pandas_df = pd.DataFrame(ohlcv_records)
 pandas_df['dt'] = pd.to_datetime(pandas_df['dt']).dt.date
 
 # 5. Convert Pandas DataFrame to Spark DataFrame
+logger.info("Converting Pandas DataFrame to Spark DataFrame.")
 spark_df = spark.createDataFrame(pandas_df, schema=schema)
 
 try:
-    # Try to append first
+    logger.info("Attempting to append data to Iceberg table.")
     spark_df.writeTo(FULL_TABLE_NAME).append()
+    logger.info("Data appended successfully.")
 except Exception as append_err:
+    logger.warning(f"Append failed: {append_err}")
     try:
+        logger.info("Attempting to create Iceberg table and write data.")
         (
             spark_df.writeTo(FULL_TABLE_NAME)
             .using("iceberg")
             .tableProperty("format-version", "2")  # Optional Iceberg version
-            .partitionedBy("days(dt)")             # <-- Partition by day
+            .partitionedBy(year(col("dt")), month(col("dt")), day(col("dt")))
             .create()
         )
+        logger.info("Iceberg table created and data written successfully.")
     except Exception as create_err:
-        print(f"Failed to create Iceberg table: {create_err}")
+        logger.error(f"Failed to create Iceberg table: {create_err}")

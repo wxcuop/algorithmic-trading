@@ -122,7 +122,7 @@ Resources:
   AthenaWorkgroup:
     Type: AWS::Athena::WorkGroup
     Properties:
-      Name: MyWorkGroup
+      Name: algo_data
       Description: AlgoWorkgroup
       RecursiveDeleteOption: true
       State: ENABLED
@@ -176,7 +176,7 @@ Resources:
           - Effect: Allow
             Action:
               - iam:PassRole
-            Resource: arn:aws:iam::616431823260:role/AlgoTradingDataAdminRole
+            Resource: !GetAtt GlueETLJobRole.Arn
 
   GlueETLJobNews:
     Type: AWS::Glue::Job
@@ -202,27 +202,27 @@ Resources:
         "--EXECUTION_ROLE": !GetAtt SageMakerExecutionRole.Arn        
 
   GlueETLJobOHLCV:
-      Type: AWS::Glue::Job
-      Properties:
-        Name: load-alphavantage-ohlcv
-        Role: !GetAtt GlueETLJobRole.Arn
-        Command:
-          Name: glueetl
-          ScriptLocation:  !Sub s3://algotrading-demo-${AWS::AccountId}/scripts/dataloaders/load_alphavantage-ohlcv.py
-          PythonVersion: "3"
-        GlueVersion: "5.0"
-        MaxRetries: 0
-        ExecutionProperty:
-          MaxConcurrentRuns: 1
-        Timeout: 10
-        MaxCapacity: 2.0
-        DefaultArguments:
-          "--job-language": "python"
-          "--BUCKET":  !Sub algotrading-demo-${AWS::AccountId}
-          "--enable-glue-datacatalog": "true"      
-          "--ALPHAVANTAGE_API_KEY": !Ref AlphaVantageApiKey
-          "--GLUE_DATABASE": !Ref GlueDatabase
-          "--EXECUTION_ROLE": !GetAtt SageMakerExecutionRole.Arn
+    Type: AWS::Glue::Job
+    Properties:
+      Name: load-alphavantage-ohlcv
+      Role: !GetAtt GlueETLJobRole.Arn
+      Command:
+        Name: glueetl
+        ScriptLocation:  !Sub s3://algotrading-demo-${AWS::AccountId}/scripts/dataloaders/load_alphavantage-ohlcv.py
+        PythonVersion: "3"
+      GlueVersion: "5.0"
+      MaxRetries: 0
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      Timeout: 10
+      MaxCapacity: 2.0
+      DefaultArguments:
+        "--job-language": "python"
+        "--BUCKET":  !Sub algotrading-demo-${AWS::AccountId}
+        "--enable-glue-datacatalog": "true"      
+        "--ALPHAVANTAGE_API_KEY": !Ref AlphaVantageApiKey
+        "--GLUE_DATABASE": !Ref GlueDatabase
+        "--EXECUTION_ROLE": !GetAtt SageMakerExecutionRole.Arn
 
 
   LakeFormationPermissionsOnDatabase:

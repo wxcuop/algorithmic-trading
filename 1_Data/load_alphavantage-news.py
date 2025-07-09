@@ -3,10 +3,12 @@ from awsglue.transforms import *
 from awsglue.utils import getResolvedOptions
 from pyspark.sql.functions import *
 import requests
+from time import sleep
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, DateType, DoubleType
+import logging
 
 args = getResolvedOptions(sys.argv,['BUCKET','ALPHAVANTAGE_API_KEY', 'GLUE_DATABASE', 'EXECUTION_ROLE'])
 BUCKET_NAME = args['BUCKET']
@@ -21,7 +23,7 @@ END_DATE = datetime(2025, 6, 30, tzinfo=timezone.utc)
 INTERVAL_DAYS = 90 # Fetch data in 90-day intervals
 API_KEY = args['ALPHAVANTAGE_API_KEY']
 EXECUTION_ROLE = args['EXECUTION_ROLE']
-SYMBOLS = ['INTC', 'AMD', 'NVDA']
+SYMBOLS = ['INTC']
 
 spark = SparkSession.builder \
     .config("spark.sql.warehouse.dir", WAREHOUSE_PATH) \
@@ -54,13 +56,14 @@ class NewsSentimentFetcher:
             f'&tickers={symbol}&apikey={self.api_key}'
             f'&time_from={time_from_str}&time_to={time_to_str}&limit=1000'
         )
-        
+        sleep(1) # Rate limit the query to 1/sec
         response = requests.get(url)
         if response.status_code == 200:
+            logger.info(f"Successfully fetched news for {symbol} from {time_from_str} to {time_to_str}")
             data = response.json()
             return data.get('feed', [])
         else:
-            print(f"Failed to fetch news for {symbol} from {time_from_str} to {time_to_str}. Status Code: {response.status_code}")
+            logger.error(f"Failed to fetch news for {symbol} from {time_from_str} to {time_to_str}. Status Code: {response.status_code}")
             return []
 
 class NewsRecord:
@@ -117,6 +120,12 @@ class NewsRecord:
 fetcher = NewsSentimentFetcher(API_KEY)
 news_records = []
 
+logging.basicConfig(
+    level=logging.INFO,  # Change to DEBUG for more verbosity
+    format="%(asctime)s %(levelname)s %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 # Iterate through the time intervals
 current_start_date = START_DATE
 while current_start_date <= END_DATE:
@@ -124,7 +133,7 @@ while current_start_date <= END_DATE:
     if current_end_date > END_DATE:
         current_end_date = END_DATE
 
-    print(f"Fetching news from {current_start_date.strftime('%Y-%m-%d')} to {current_end_date.strftime('%Y-%m-%d')}")
+    logger.info(f"Fetching news from {current_start_date.strftime('%Y-%m-%d')} to {current_end_date.strftime('%Y-%m-%d')}")
 
     for symbol in SYMBOLS:
         news = fetcher.fetch_news_for_symbol_in_interval(symbol, current_start_date, current_end_date)
@@ -136,24 +145,27 @@ while current_start_date <= END_DATE:
     current_start_date = current_end_date + timedelta(days=1) # Move to the next day to avoid overlaps
 
 # 4. Create Pandas DataFrame
+logger.info("Creating Pandas DataFrame from news records.")
 pandas_df = pd.DataFrame(news_records)
 
 # 5. Convert Pandas DataFrame to Spark DataFrame
+logger.info("Converting Pandas DataFrame to Spark DataFrame.")
 spark_df = spark.createDataFrame(pandas_df, schema=schema)
 
 try:
-    # Try to append first
+    logger.info("Attempting to append news data to Iceberg table.")
     spark_df.writeTo(FULL_TABLE_NAME).append()
+    logger.info("News data appended successfully.")
 except Exception as append_err:
-    print(f"Append failed, attempting to create table: {append_err}")
+    logger.warning(f"Append failed, attempting to create table: {append_err}")
     try:
+        logger.info("Attempting to create Iceberg table and write news data.")
         (
             spark_df.writeTo(FULL_TABLE_NAME)
             .using("iceberg")
             .tableProperty("format-version", "2")  # Optional Iceberg version
-            .partitionedBy("days(time_published_datetime)")             # <-- Partition by day
             .create()
         )
-        print(f"Table {FULL_TABLE_NAME} created successfully.")
+        logger.info(f"Table {FULL_TABLE_NAME} created successfully.")
     except Exception as create_err:
-        print(f"Failed to create Iceberg table: {create_err}")
+        logger.error(f"Failed to create Iceberg table: {create_err}")
