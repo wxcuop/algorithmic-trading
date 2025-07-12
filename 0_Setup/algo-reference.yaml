@@ -14,19 +14,20 @@ Parameters:
     NoEcho: 'true' # This hides the parameter value in console output and history
     Default: Z3TBUBW7GS7WSE2W
 
-
 Resources:
-
+  # S3 Bucket for storing data and scripts
   S3Bucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub algotrading-demo-${AWS::AccountId}
 
+  # ECR Repository for container images
   ECR:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: !Sub ${EnvironmentName}_ecr
 
+  # SageMaker Notebook Instance for development and analysis
   AlgorithmicTradingInstance:
     Type: AWS::SageMaker::NotebookInstance
     Properties:
@@ -35,6 +36,7 @@ Resources:
       RoleArn: !GetAtt SageMakerExecutionRole.Arn
       PlatformIdentifier: notebook-al2-v3
 
+  # S3 Access Policy for the trading bucket
   S3Policy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -53,6 +55,7 @@ Resources:
               - !Sub arn:aws:s3:::algotrading-demo-${AWS::AccountId}
               - !Sub arn:aws:s3:::algotrading-demo-${AWS::AccountId}/*
 
+  # SageMaker Execution Role with necessary permissions
   SageMakerExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -75,6 +78,7 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonKinesisReadOnlyAccess
         - !Ref S3Policy
 
+  # ECS Task Execution Role for container tasks
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -91,6 +95,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 
+  # Algorithm Execution Role for trading algorithms
   AlgoExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -107,11 +112,13 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 
+  # ECS Cluster for running trading algorithms
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterName: !Ref EnvironmentName
 
+  # Glue Database for data catalog
   GlueDatabase:
     Type: AWS::Glue::Database
     Properties:
@@ -119,6 +126,7 @@ Resources:
       DatabaseInput:
         Name: algo_data
 
+  # Athena Workgroup for querying data
   AthenaWorkgroup:
     Type: AWS::Athena::WorkGroup
     Properties:
@@ -131,12 +139,14 @@ Resources:
         ResultConfiguration:
           OutputLocation: !Sub s3://algotrading-demo-${AWS::AccountId}/results/
 
+  # CloudWatch Log Group for application logs
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: algo
       RetentionInDays: 7
 
+  # Glue ETL Job Role with Lake Formation permissions
   GlueETLJobRole:
     Type: AWS::IAM::Role
     Properties:
@@ -162,15 +172,15 @@ Resources:
               - Effect: Allow
                 Action:
                   - lakeformation:RegisterResource                 
-                Resource: !Sub arn:aws:lakeformation:${AWS::Region}:${AWS::AccountId}:resource/algotrading-demo-${AWS::AccountId} # Target the specific S3 bucket
+                Resource: !Sub arn:aws:lakeformation:${AWS::Region}:${AWS::AccountId}:resource/algotrading-demo-${AWS::AccountId}
 
-
+  # IAM Policy to allow Glue to pass its role
   GluePassRolePolicy:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: AllowPassRoleForGlue
       Roles:
-        - Ref: GlueETLJobRole
+        - !Ref GlueETLJobRole
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -179,6 +189,7 @@ Resources:
               - iam:PassRole
             Resource: !GetAtt GlueETLJobRole.Arn
 
+  # Glue ETL Job for loading Alpha Vantage news data
   GlueETLJobNews:
     Type: AWS::Glue::Job
     Properties:
@@ -186,7 +197,7 @@ Resources:
       Role: !GetAtt GlueETLJobRole.Arn
       Command:
         Name: glueetl
-        ScriptLocation:  !Sub s3://algotrading-demo-${AWS::AccountId}/scripts/dataloaders/load_alphavantage-news.py
+        ScriptLocation: !Sub s3://algotrading-demo-${AWS::AccountId}/scripts/dataloaders/load_alphavantage-news.py
         PythonVersion: "3"
       GlueVersion: "5.0"
       MaxRetries: 0
@@ -196,12 +207,13 @@ Resources:
       MaxCapacity: 2.0
       DefaultArguments:
         "--job-language": "python"
-        "--BUCKET":  !Sub algotrading-demo-${AWS::AccountId}
+        "--BUCKET": !Sub algotrading-demo-${AWS::AccountId}
         "--enable-glue-datacatalog": "true"      
         "--ALPHAVANTAGE_API_KEY": !Ref AlphaVantageApiKey
         "--GLUE_DATABASE": !Ref GlueDatabase        
         "--EXECUTION_ROLE": !GetAtt SageMakerExecutionRole.Arn        
 
+  # Glue ETL Job for loading Alpha Vantage OHLCV data
   GlueETLJobOHLCV:
     Type: AWS::Glue::Job
     Properties:
@@ -209,7 +221,7 @@ Resources:
       Role: !GetAtt GlueETLJobRole.Arn
       Command:
         Name: glueetl
-        ScriptLocation:  !Sub s3://algotrading-demo-${AWS::AccountId}/scripts/dataloaders/load_alphavantage-ohlcv.py
+        ScriptLocation: !Sub s3://algotrading-demo-${AWS::AccountId}/scripts/dataloaders/load_alphavantage-ohlcv.py
         PythonVersion: "3"
       GlueVersion: "5.0"
       MaxRetries: 0
@@ -219,13 +231,13 @@ Resources:
       MaxCapacity: 2.0
       DefaultArguments:
         "--job-language": "python"
-        "--BUCKET":  !Sub algotrading-demo-${AWS::AccountId}
+        "--BUCKET": !Sub algotrading-demo-${AWS::AccountId}
         "--enable-glue-datacatalog": "true"      
         "--ALPHAVANTAGE_API_KEY": !Ref AlphaVantageApiKey
         "--GLUE_DATABASE": !Ref GlueDatabase
         "--EXECUTION_ROLE": !GetAtt SageMakerExecutionRole.Arn
 
-
+  # Lake Formation permissions for the Glue ETL role on the database
   LakeFormationPermissionsOnDatabase:
     Type: AWS::LakeFormation::Permissions
     Properties:
@@ -239,8 +251,9 @@ Resources:
         DatabaseResource:
           Name: algo_data
 
-      
+  # Lake Formation permissions for SageMaker to select from all tables
   DatabaseTableSelectPermissions: 
+    Type: AWS::LakeFormation::Permissions
     Properties:
       DataLakePrincipal:
         DataLakePrincipalIdentifier: !GetAtt SageMakerExecutionRole.Arn
@@ -251,12 +264,14 @@ Resources:
       Permissions:
         - SELECT
 
+  # Lake Formation Data Lake Settings with admin role
   DataLakeAdminSettings:
     Type: AWS::LakeFormation::DataLakeSettings
     Properties:
       Admins:
         - DataLakePrincipalIdentifier: !GetAtt GlueETLJobRole.Arn
 
+  # Lake Formation S3 Resource registration
   LakeFormationS3Resource:
     Type: AWS::LakeFormation::Resource
     Properties:
@@ -264,33 +279,36 @@ Resources:
       RoleArn: !GetAtt GlueETLJobRole.Arn
       UseServiceLinkedRole: false
 
-
-
 Outputs:
+  # ECR Repository reference
   ECR:
     Description: A reference to ECR
     Value: !Ref ECR
     Export:
       Name: AlgorithmicTrading-ECR
 
+  # S3 Bucket reference
   S3Bucket:
     Description: A reference to S3 Bucket
     Value: !Ref S3Bucket
     Export:
       Name: AlgorithmicTrading-S3Bucket
 
+  # ECS Task Execution Role reference
   ECSTaskExecutionRole:
     Description: ECSTaskExecutionRole
     Value: !Ref ECSTaskExecutionRole
     Export:
       Name: AlgorithmicTrading-ECSTaskExecutionRole
 
+  # Algorithm Execution Role ARN
   AlgoExecutionRole:
     Description: AlgoExecutionRole ARN
     Value: !GetAtt AlgoExecutionRole.Arn
     Export:
       Name: AlgorithmicTrading-AlgoExecutionRole-ARN
 
+  # ECS Cluster reference
   Cluster:
     Description: A reference to the ECS cluster
     Value: !Ref ECSCluster
