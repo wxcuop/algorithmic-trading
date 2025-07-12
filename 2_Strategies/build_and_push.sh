@@ -43,3 +43,4 @@ docker build  -t ${image} .
 docker tag ${image} ${fullname}
 
 docker push ${fullname}
+

@@ -1,37 +1,44 @@
 FROM tensorflow/tensorflow:nightly-jupyter
 
+LABEL description="Algorithmic trading model image"
+
+
+ARG TA_LIB_VERSION=0.6.4
+ARG TA_LIB_DIR=ta-lib-${TA_LIB_VERSION}
+
 RUN apt-get -y update && \
     apt-get install -y --no-install-recommends \
     build-essential \
     wget \
     python3 \
-    nginx \
-    && rm -rf /var/lib/apt/lists/*
+    nginx && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Download, build, and install the TA-Lib C library in a single layer, then clean up
-RUN wget https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib-0.6.4-src.tar.gz && \
-    tar -xzf ta-lib-0.6.4-src.tar.gz && \
-    cd ta-lib-0.6.4/ && \
+RUN wget https://github.com/ta-lib/ta-lib/releases/download/v${TA_LIB_VERSION}/${TA_LIB_DIR}-src.tar.gz && \
+    tar -xzf ${TA_LIB_DIR}-src.tar.gz && \
+    cd ${TA_LIB_DIR}/ && \
     ./configure --prefix=/usr && \
     make && \
     make install && \
     cd ../ && \
-    rm -rf ta-lib ta-lib-0.6.4-src.tar.gz && \
+    rm -rf ta-lib ${TA_LIB_DIR}-src.tar.gz && \
     ldconfig
 
 
 RUN python3 -m pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
-    numpy \
-    ta-lib \
-    scipy \
-    scikit-learn \
-    scikeras \
-    pandas \
-    flask \
+    numpy==2.3.1 \
+    ta-lib==0.6.4 \
+    scipy==1.16.0 \
+    scikit-learn==1.7.0 \
+    scikeras==0.13.0 \
+    pandas==2.3.1 \
+    flask==3.1.1 \
     gevent \
     gunicorn \
-    backtrader \
+    backtrader==1.9.78.123 \
     boto3 \
     --ignore-installed blinker
 
@@ -43,4 +50,3 @@ ENV PATH="/opt/program:${PATH}"
 # Set up the program in the image
 COPY model /opt/program
 WORKDIR /opt/program
-
