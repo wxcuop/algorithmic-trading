@@ -7,16 +7,6 @@ This proof-of-concept (POC) demonstrates a machine learning-based quantitative r
 ---
 
 The POC has currently 4 strategies implemented, with one more under development:
-| Strategy | Description | ML/AI | Data Used |
-|----------|-------------|-------|-----------|
-| **ML Long/Short** | Neural network predicts long/short opportunities using technical indicators | ✅ | Price, Technicals |
-| **ML Long/Short w/ Sentiment** | Adds news sentiment features to ML model | ✅ | Price, News Sentiment |
-| **Enhanced ML** | (Planned) Adds competitor/industry sentiment via GenAI & security master | ✅ | Price, News, Industry |
-| **SMA Crossover** | Classic fast/slow moving average crossover | ❌ | Price |
-| **Daily Breakout** | Momentum strategy based on recent highs/lows | ❌ | Price |
-
-
-## Strategy Details
 
 ### 1. Machine Learning Long/Short Prediction Strategy
 
