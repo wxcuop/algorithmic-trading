@@ -1,7 +1,8 @@
 # Algorithmic Trading Proof-of-Concept
 
-This proof-of-concept (POC) demonstrates a machine learning-based quantitative research environment for algorithmic trading. This is a completely serverless implementation, creating backtesting environment as-a-code, scaling up the instances during backtesting and shutting everything down at the end of the run. The POC shows how to load and store financial data in AWS hosted Iceberg tables (market data and news sentiment data from Alphavantage), and how to build and backtest algorithmic trading strategies with SageMaker AI using technical indicators and advanced machine learning models. Training and inference can be performed both locally and on the ephemeral cluster, which is spun and shut down automatically. You will notice, that there is no need to provision EC2 or VPC at all, everything is based on the AWS-managed services and a declarative configuration source. 
+This proof-of-concept (POC) demonstrates a machine learning-based quantitative research environment for algorithmic trading. It is a completely serverless implementation that creates a backtesting environment using an infrastructure-as-code approach, automatically scaling up instances for the backtest and tearing everything down upon completion. The POC shows how to load and store financial data (market data and Alphavantage news sentiment) in AWS-hosted Iceberg tables and how to build and backtest trading strategies using Amazon SageMaker, technical indicators, and advanced machine learning models. Training and inference can be performed locally or on an ephemeral cluster that is spun up and shut down automatically.
 
+Notably, there is no need to manually provision EC2 instances or a VPC; the entire system is built on AWS-managed services and declarative configuration.
 > The goal is to demonstrate the MLOps pipeline. Several reasonably realistic algorithms are included for demonstration purposes. This is a demo, not a production trading algorithm. Training is performed on synthetic data. The objective is to showcase the quant platform setup, not to demonstrate real alpha. Please ignore the negative Sharpe ratio and PnL; the focus is on demonstrating the platform, not on trading performance.
 
 ---
@@ -42,16 +43,15 @@ An advanced strategy that leverages a pre-trained neural network (MLP) to predic
 
 ### 2. Alternative Data Machine Learning Long/Short Prediction Strategy
 
-Very similar to the previous strategy, but also uses news-based sentiment to train the model. In addition to the closing price SMA, it takes the SMA of the news sentiment over 1–16 days.
-The sentiment is specific to the backtested symbol, so if a news article mentiones more than a single symbol, the sentiment taken into the account by the model is the symbol sentiment, not
-the article sentiment. For example, if the article says "AMD (AMD) beats Intel (INTC) in the race to the Moon", the sentiment of the article will be bullish, the AMD sentiment will be strongly
-bullish however the esentimend of INTC will be negative. If we backtest single stock INTC, only the negative INTC sentiment will be taken into account by the model
+This strategy is similar to the first but enriches the feature set with news-based sentiment. In addition to SMAs of the closing price, it incorporates SMAs of news sentiment over 1–16 day periods.
+
+The sentiment data is entity-specific. For example, if an article states, "AMD (AMD) beats Intel (INTC) in the race to the Moon," the model uses the specific sentiment for each symbol, not the overall article sentiment. In this case, sentiment for AMD would be strongly bullish, while sentiment for INTC would be negative. When backtesting a strategy for INTC, only its negative sentiment would be considered.
 
 ---
 
 ### 3. Enhanced Alternative Data ML Long/Short Prediction Strategy
 
-A future enhancement will add sentiment for competitors and the industry segment. To determine which symbols represent competitors, GenAI will be used. To identify the segment a symbol belongs to, the external security master provided by Alphavantage will be queried.
+A future enhancement will add sentiment for competitors and the broader industry segment. Competitors will be identified using GenAI, while industry segments will be determined by querying an external security master from Alphavantage.
 
 ---
 
@@ -133,7 +133,7 @@ You will notice, that this is a completely serverless implementation. When backt
    Strategies and associated dependencies are packaged in a Docker container. 
 
 6. **Backtesting**
-Backtesting then can be run locally (on the Jupyter notebook server) or on a ECS Cluster via Fargate. AWS Fargate is a technology that you can use with Amazon ECS to run containers without having to manage servers or clusters of Amazon EC2 instances. When executing worlkoad on the ECS, users can specify the size of the cluster and the specs of the servers (for example, types of GPU to use, whether to use preemptible instanbces and so on)
+Backtesting can be run locally (on the SageMaker notebook server) or on an ECS Cluster via AWS Fargate. Fargate allows for running containers without managing servers or EC2 instances. When executing on ECS, users can specify cluster size and hardware specifications (e.g., GPU types, use of preemptible instances, etc.).
 7. **Logging:**  
    Execution logs are sent to AWS CloudWatch.
 
