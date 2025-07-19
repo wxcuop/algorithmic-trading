@@ -1,5 +1,7 @@
 # Algorithmic Trading Proof-of-Concept
 
+forked from https://bitbucket.org/imalinovsky/algorithmic-trading/src/main/
+
 This proof-of-concept (POC) demonstrates a machine learning-based quantitative research environment for algorithmic trading. It is a completely serverless implementation that creates a backtesting environment using an infrastructure-as-code approach, automatically scaling up instances for the backtest and tearing everything down upon completion. The POC shows how to load and store financial data (market data and Alphavantage news sentiment) in AWS-hosted Iceberg tables and how to build and backtest trading strategies using Amazon SageMaker, technical indicators, and advanced machine learning models. Training and inference can be performed locally or on an ephemeral cluster that is spun up and shut down automatically.
 
 Notably, there is no need to manually provision EC2 instances or a VPC; the entire system is built on AWS-managed services and declarative configuration.
